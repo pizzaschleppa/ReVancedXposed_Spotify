@@ -22,20 +22,20 @@ import androidx.core.graphics.toColorInt
 
 object SettingsSheet {
 
-    // MODIFICA: La funzione ora accetta anche la anchorView (la vista dell'avatar)
+    // The function now also accepts anchorView (the avatar view).
     @SuppressLint("ClickableViewAccessibility", "SetTextI18n")
     fun show(activity: Activity, anchorView: View?) {
         val prefs = activity.getSharedPreferences("spotify_prefs", Context.MODE_PRIVATE)
         val dialog = Dialog(activity, android.R.style.Theme_Translucent_NoTitleBar)
         val density = activity.resources.displayMetrics.density
 
-        // Stato iniziale: invisibile, microscopico e trasparente per l'animazione
+        // Initial state: invisible, tiny, and transparent for the animation.
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
                 setColor("#202020".toColorInt())
                 val radius = (28 * density)
-                // Angoli stondati su tutti i lati per una card fluttuante
+                // Rounded corners on every side for a floating card.
                 cornerRadii = floatArrayOf(radius, radius, radius, radius, radius, radius, radius, radius)
             }
             val p = (24 * density).toInt()
@@ -46,13 +46,13 @@ object SettingsSheet {
             isClickable = true
             elevation = 40f
 
-            // --- STATO INIZIALE PER ANIMAZIONE ---
+            // --- INITIAL ANIMATION STATE ---
             alpha = 0f
             scaleX = 0f
             scaleY = 0f
         }
 
-        // --- TITOLO ---
+        // --- TITLE ---
         root.addView(TextView(activity).apply {
             text = "Revanced Xposed FE Settings"
             textSize = 20f
@@ -61,16 +61,16 @@ object SettingsSheet {
             setPadding(0, 0, 0, (15 * density).toInt())
         })
 
-        // --- OPZIONI ---
+        // --- OPTIONS ---
         root.addView(createRow(activity, "Enable Premium", "Listen in any order, shuffle, or Smart Shuffle", "enable_premium", prefs))
         root.addView(createRow(activity, "Enable AdBlock", "Block ads and other unwanted content", "enable_adblock", prefs))
         root.addView(createRow(activity, "Enable Momnet Theme", "Dynamic colors based on the wallpaper", "enable_monet", prefs))
         root.addView(createRow(activity, "Enable RoundyUI", "Rounded corners on cards and images", "enable_round_ui", prefs))
 
-        // --- SPAZIO ---
+        // --- SPACING ---
         root.addView(View(activity).apply { layoutParams = LinearLayout.LayoutParams(-1, (20 * density).toInt()) })
 
-        // --- PULSANTE RIAVVIO ---
+        // --- RESTART BUTTON ---
         val restartButton = Button(activity).apply {
             text = "Apply and Restart"
             setTextColor(Color.BLACK)
@@ -94,12 +94,12 @@ object SettingsSheet {
         }
         root.addView(restartButton)
 
-        // --- WRAPPER E ANIMAZIONE ---
+        // --- WRAPPER AND ANIMATION ---
         val wrapper = object : LinearLayout(activity) {
             override fun onTouchEvent(event: MotionEvent): Boolean {
                 if (event.action == MotionEvent.ACTION_DOWN) {
-                    // --- ANIMAZIONE DI CONTRAZIONE PER CHIUDERE (Verso l'avatar) ---
-                    // Il pivot è già impostato, si comprimerà verso il punto da cui è uscito
+                    // --- SHRINK ANIMATION FOR CLOSING (toward the avatar) ---
+                    // The pivot is already set, so it will shrink toward the point it came from.
                     root.animate()
                         .scaleX(0f)
                         .scaleY(0f)
@@ -111,7 +111,7 @@ object SettingsSheet {
                 return true
             }
         }.apply {
-            // Posizionato al centro per enfatizzare l'espansione e compressione come una card
+            // Center it to make the expansion and shrink feel like a card animation.
             gravity = Gravity.CENTER
             setBackgroundColor("#B3000000".toColorInt())
             addView(root)
@@ -128,16 +128,16 @@ object SettingsSheet {
                     val rootLoc = IntArray(2)
                     root.getLocationOnScreen(rootLoc)
 
-                    // --- REGOLAZIONE FINE ---
-                    // Aumenta questi valori se l'animazione è ancora troppo a sinistra o in alto
-                    val offsetX = 180 * density // Sposta il punto di nascita a DESTRA
-                    val offsetY = 180 * density // Sposta il punto di nascita in BASSO
+                    // --- FINE TUNING ---
+                    // Increase these values if the animation is still too far left or too high.
+                    val offsetX = 180 * density // Move the origin point to the RIGHT.
+                    val offsetY = 180 * density // Move the origin point DOWN.
 
-                    // Calcoliamo il centro visivo e applichiamo gli spostamenti
+                    // Calculate the visual center and apply the offsets.
                     val visualCenterX = rect.left + (rect.width() / 2f) + offsetX
                     val visualCenterY = rect.top + (rect.height() / 2f) + offsetY
 
-                    // Pivot relativo allo sheet
+                    // Pivot relative to the sheet.
                     root.pivotX = visualCenterX - rootLoc[0]
                     root.pivotY = visualCenterY - rootLoc[1]
                 } else {
@@ -145,7 +145,7 @@ object SettingsSheet {
                     root.pivotY = root.height / 2f
                 }
 
-                // Avvio animazione
+                // Start the animation.
                 root.animate()
                     .scaleX(1f).scaleY(1f).alpha(1f)
                     .setDuration(1000)
@@ -159,7 +159,7 @@ object SettingsSheet {
         dialog.setContentView(wrapper)
         dialog.window?.apply {
             setLayout(-1, -1) // Full screen
-            // Disabilitiamo le animazioni standard del Dialog per usare le nostre
+            // Disable the standard Dialog animations so we can use our own.
             setWindowAnimations(0)
         }
         dialog.show()

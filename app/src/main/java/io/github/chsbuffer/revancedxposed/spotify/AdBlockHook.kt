@@ -12,11 +12,11 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
         XposedBridge.log("RE-VANCED XPOSED: Avvio AdBlocker (Refined)")
 
         // ==========================================
-        // 1. PATCH DEI FLAGS (Legacy/Compat)
+        // 1. FLAG PATCH (legacy/compat)
         // ==========================================
-        // Nota: Nelle versioni recenti 'LoadedFlags' è spesso offuscato.
-        // La logica principale è ora in ProductStateProto (UnlockPremiumPatch).
-        // Questo hook serve come sicurezza aggiuntiva per varianti specifiche.
+        // Note: In recent versions, 'LoadedFlags' is often obfuscated.
+        // The main logic now lives in ProductStateProto (UnlockPremiumPatch).
+        // This hook acts as an extra safeguard for specific variants.
         runCatching {
             val flagsClass = cl.loadClass("com.spotify.connectivity.flags.LoadedFlags")
             XposedBridge.hookAllMethods(flagsClass, "get", object : XC_MethodHook() {
@@ -31,10 +31,10 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
         }
 
         // ==========================================
-        // 2. DISATTIVAZIONE IMPOSTAZIONI PUBBLICITÀ
+        // 2. DISABLE AD SETTINGS
         // ==========================================
         runCatching {
-            // Tentiamo di trovare classi note che gestiscono lo stato delle Ads
+            // Try to find known classes that manage ad state.
             val adsClass = cl.loadClass("com.spotify.adsinternal.adscore.AdsSettings")
             XposedBridge.hookAllMethods(adsClass, "isAdsEnabled", object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {

@@ -15,7 +15,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
     private val colorCache = HashMap<Int, Int>()
     private val res = app.resources
 
-    // --- COLORI MONET ---
+    // --- MONET'S COLORS ---
     @SuppressLint("DiscouragedApi")
     private val primaryBg = try {
         app.getColor(res.getIdentifier("system_neutral1_900", "color", "android"))
@@ -33,7 +33,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
     } catch (_: Exception) {
         "#1DB954".toColorInt() }
 
-    // NUOVO: Valore per lo stato "Pressed"
+    // NEW: Value for the “Pressed” status
     @SuppressLint("DiscouragedApi")
     private val accentPressed = try {
         app.getColor(res.getIdentifier("system_accent1_400", "color", "android"))
@@ -43,7 +43,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
     fun hook() {
         val classLoader = lpparam.classLoader
 
-        // 1. PorterDuffColorFilter (Rimane invariato, va bene così)
+        // 1. PorterDuffColorFilter (Remains unchanged; this is fine)
         XposedHelpers.findAndHookConstructor(
             "android.graphics.PorterDuffColorFilter",
             classLoader,
@@ -56,7 +56,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             }
         )
 
-        // 2. ColorStateList: Gestione chirurgica degli stati (Pressed/Selected)
+        // 2. ColorStateList: Surgical Management of States (Pressed/Selected)
         XposedHelpers.findAndHookMethod(
             "android.content.res.ColorStateList",
             classLoader,
@@ -73,21 +73,21 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
                     val isFocused = states.contains(android.R.attr.state_focused)
 
                     param.result = when {
-                        // SE PREMUTO: Applichiamo il colore accentPressed con un'opacità del 30%
-                        // Questo crea l'effetto "vetro colorato" sopra le copertine
+                        // WHEN PRESSED: Apply the “accentPressed” color with 30% opacity
+                        // This creates a “stained glass” effect on the covers
                         isPressed || isFocused -> {
                             Color.argb(
-                                77, // Alpha fisso al 30% (circa 77/255)
+                                77, // Fixed 30% alpha (about 77/255).
                                 Color.red(accentPressed),
                                 Color.green(accentPressed),
                                 Color.blue(accentPressed)
                             )
                         }
 
-                        // SE SELEZIONATO (es. icona NavBar attiva): Accent pieno
+                        // IF SELECTED (e.g., NavBar icon active): Full accent
                         isSelected -> accent
 
-                        // ALTRIMENTI: Logica standard
+                        // OTHERWISE: Standard logic
                         else -> replaceColorLogic(originalColor)
                     }
                 }
@@ -133,8 +133,8 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
                 }
             }
         )
-        // 6. Hook alle Risorse (getColor)
-        // Intercetta ogni volta che Spotify chiede un colore tramite ID (es. R.color.spotify_green)
+        // 6. Resource Hook (getColor)
+        // Intercept every time Spotify requests a color via an ID (e.g., R.color.spotify_green)
         XposedHelpers.findAndHookMethod(
             "android.content.res.Resources",
             lpparam.classLoader,
@@ -149,8 +149,8 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             }
         )
         /*
-        // 7. Hook alle Risorse (getColorStateList)
-        // Fondamentale per switch e icone nelle impostazioni
+        // 7. Resource hook (getColorStateList)
+        // Important for switches and icons in settings.
         XposedHelpers.findAndHookMethod(
             "android.content.res.Resources",
             lpparam.classLoader,
@@ -161,15 +161,15 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val csl = param.result as? android.content.res.ColorStateList ?: return
 
-                    // Creiamo una nuova ColorStateList basata sulla nostra logica Monet
-                    // Questo forzerà switch e testi cliccabili a seguire il tema
+                    // Create a new ColorStateList based on our Monet logic.
+                    // This forces switches and clickable text to follow the theme.
                     param.result = android.content.res.ColorStateList.valueOf(replaceColorLogic(csl.defaultColor))
                 }
             }
         )
         */
-        // 8. Hook ai TypedArray (Il "colpo finale" per gli XML)
-        // Quando Android legge un attributo da un tema XML (es. ?attr/colorPrimary)
+        // 8. Hooks for TypedArrays (The “Final Blow” for XML)
+        // When Android reads an attribute from an XML theme (e.g., ?attr/colorPrimary)
         XposedHelpers.findAndHookMethod(
             "android.content.res.TypedArray",
             lpparam.classLoader,
@@ -184,7 +184,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             }
         )
 
-        // 9.  RIMOZIONE SFUMATURE/OMBRE
+        // 9.  REMOVING SHADING/SHADOWS
         XposedHelpers.findAndHookMethod(
             "android.view.View",
             classLoader,
@@ -193,27 +193,27 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val view = param.thisObject as View
 
-                    // Otteniamo il nome dell'ID (es. "shadow", "fade_overlay")
+                    // We retrieve the ID name (e.g., “shadow,” “fade_overlay”)
                     val resName = try {
                         view.resources.getResourceEntryName(view.id).lowercase()
                     } catch (_: Exception) { "" }
 
-                    // Identifichiamo le ombre incriminate
-                    // Spotify spesso usa "shadow", "edge_fade" o nomi simili per quegli overlay
+                    // Let's identify the suspicious shadows
+                    // Spotify often uses “shadow,” “edge_fade,” or similar names for those overlays
                     val isShadowOrFade = resName.contains("shadow") ||
                             resName.contains("fade") ||
                             resName.contains("gradient")
 
                     if (isShadowOrFade && view.javaClass.name == "android.view.View") {
-                        // Nascondiamo la view impostandola a GONE
+                        // Let's hide the view by setting it to GONE
                         view.visibility = View.GONE
 
-                        // Opzionale: impostiamo le dimensioni a 0 per sicurezza
+                        // Optional: Set the dimensions to 0 just to be safe
                         view.layoutParams.width = 0
                         view.layoutParams.height = 0
                     }
 
-                    // Bonus: Rimuoviamo il fading edge dalle liste (RecyclerView)
+                    // Bonus: Let's Remove the Fading Edge from Lists (RecyclerView)
                     if (view.javaClass.name.contains("RecyclerView")) {
                         view.isHorizontalFadingEdgeEnabled = false
                         view.isVerticalFadingEdgeEnabled = false
@@ -233,23 +233,23 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
         val b = Color.blue(color)
 
         val newColor = when {
-            // 1. VERDE SPOTIFY -> ACCENT
+            // 1. SPOTIFY GREEN -> ACCENT
             (g > 100 && g > r * 1.1 && g > b * 1.1) -> accent
 
-            // 2. TESTI E ICONE LUMINOSE -> ACCENT
-            // (Puoi commentare questo se preferisci che i testi bianchi restino bianchi invece di colorarsi)
+            // 2. TEXT AND LIGHT-UP ICONS -> ACCENT
+            // (Comment this out if you prefer white text to stay white instead of being colored.)
             (r > 150 && abs(r - g) < 20 && abs(r - b) < 20) -> accent
 
-            // 3. SFONDO BASE (Nero profondo) -> PRIMARY BG
-            // Spotify usa valori RGB molto bassi (es. 18,18,18) per lo sfondo dietro a tutto.
+            // 3. BASIC BACKGROUND (Deep Black) -> PRIMARY BG
+            // Spotify uses very low RGB values (e.g., 18, 18, 18) for the background behind everything.
             (r <= 25 && g <= 25 && b <= 25) -> primaryBg
 
-            // 4. SUPERFICI ELEVATE E PULSANTI INATTIVI -> SECONDARY BG
-            // Qui vivono i riempimenti delle chips! (es. 36,36,36 o 42,42,42)
+            // 4. HIGH AREAS AND INACTIVE BUTTONS -> SECONDARY BG
+            // This is where the chip fills live! (e.g., 36,36,36 or 42,42,42)
             (r in 26..70 && g in 26..70 && b in 26..70) -> secondaryBg
 
-            // 5. GRIGI MEDI E CHIARI -> Lasciamo l'originale
-            // Evita di colorare tutto, altrimenti testi secondari e separatori perdono senso.
+            // 5. MEDIUM AND LIGHT GREYS -> Keep the original
+            // Avoid coloring everything; otherwise, secondary text and separators lose their meaning.
             else -> color
         }
 

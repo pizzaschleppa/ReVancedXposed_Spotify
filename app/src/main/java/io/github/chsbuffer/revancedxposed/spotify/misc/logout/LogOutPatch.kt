@@ -17,7 +17,7 @@ private object AuthCache {
 fun SpotifyHook.LogOutPatch() {
     val cl = classLoader
 
-    // --- HELPER PER REFLECTION SICURA ---
+    // --- HELPER FOR SAFE REFLECTION ---
     fun findMethodSafe(clazz: Class<*>, name: String, vararg params: Class<*>): Method? {
         return runCatching { clazz.getDeclaredMethod(name, *params).apply { isAccessible = true } }.getOrNull()
             ?: runCatching { clazz.methods.firstOrNull { it.name == name && it.parameterTypes.size == params.size }?.apply { isAccessible = true } }.getOrNull()
@@ -79,7 +79,7 @@ fun SpotifyHook.LogOutPatch() {
                     // Target: login/auth/token refresh endpoints
                     val isAuthEndpoint = host.contains("login5") || host.contains("googleusercontent") || host.contains("spotify.com")
 
-                    // LAYER 1: Caching success (200) e Replay su fallimento (401/403)
+                    // LAYER 1: Cache success (200) and replay it on failure (401/403).
                     if (code in 200..299 && isAuthEndpoint) {
                         val bodyObj = findMethodSafe(resp.javaClass, "body")?.invoke(resp) ?: return
                         val peeked = runCatching {

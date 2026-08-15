@@ -29,7 +29,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
         val classLoader = lpparam.classLoader
 
         /*
-        // 0. Hook UNIVERSALE con LOG di Debug
+        // 0. Universal hook with debug logging
         XposedHelpers.findAndHookMethod(
             "android.view.View",
             classLoader,
@@ -38,10 +38,10 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val view = param.thisObject as View
 
-                    // DEBUG: Estraiamo l'ID per capire cosa stiamo toccando
+                    // DEBUG: Extract the ID so we know what we are touching.
                     val resName = try { view.resources.getResourceEntryName(view.id) } catch (_: Exception) { "null" }
                     if (view is ImageView || resName != "null") {
-                        Log.d(TAG, "View rilevata: ID -> $resName | Classe -> ${view.javaClass.simpleName}")
+                        Log.d(TAG, "View detected: ID -> $resName | Class -> ${view.javaClass.simpleName}")
                     }
 
                     applyRoundingIfTarget(view)
@@ -50,7 +50,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
         )
          */
 
-        // 1. Hook UNIVERSALE per lo stondamento basato su ID e Classe
+        // 1. Universal hook for rounding based on ID and class.
         XposedHelpers.findAndHookMethod(
             "android.view.View",
             classLoader,
@@ -63,8 +63,8 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             }
         )
 
-        // 2. Hook specifico per le ImageView (Copertine Playlist)
-        // Spesso onAttachedToWindow non basta se l'immagine viene riciclata in una lista
+        // 2. ImageView-specific hook (playlist covers).
+        // onAttachedToWindow is often not enough when the image is recycled in a list.
         XposedHelpers.findAndHookMethod(
             "android.widget.ImageView",
             classLoader,
@@ -78,7 +78,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             }
         )
 
-        // 3. Hook per i GradientDrawable (Pulsanti)
+        // 3. GradientDrawable hook (buttons).
         XposedHelpers.findAndHookMethod(
             "android.graphics.drawable.GradientDrawable",
             classLoader,
@@ -92,7 +92,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             }
         )
 
-        // 4. Hook per i BottomSheets (Il contenitore che scivola dal basso)
+        // 4. BottomSheet hook (the container that slides up from the bottom).
         XposedHelpers.findAndHookMethod(
             "com.google.android.material.bottomsheet.BottomSheetBehavior",
             classLoader,
@@ -104,12 +104,12 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
                 override fun afterHookedMethod(param: MethodHookParam) {
                     val view = param.args[1] as View
 
-                    // Applichiamo lo stondamento solo agli angoli SUPERIORI (Top Left e Top Right)
-                    // Tipico dei BottomSheet Material 3
+                    // Apply rounding only to the TOP corners (top left and top right).
+                    // This is typical for Material 3 BottomSheets.
                     view.clipToOutline = true
                     view.outlineProvider = object : ViewOutlineProvider() {
                         override fun getOutline(view: View, outline: Outline) {
-                            // Creiamo un rettangolo che esce dal basso per non stondare gli angoli inferiori
+                            // Create a rectangle that extends below the view so the bottom corners stay square.
                             outline.setRoundRect(
                                 0, 0,
                                 view.width, view.height + radiusLarge.toInt(),
@@ -121,8 +121,8 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             }
         )
 
-// 5. Hook di rinforzo per i Background dei BottomSheet
-// Molte app usano un MaterialShapeDrawable per gestire gli angoli dei pannelli
+// 5. Backup hook for BottomSheet backgrounds.
+// Many apps use MaterialShapeDrawable to handle panel corners.
         XposedHelpers.findAndHookMethod(
             "com.google.android.material.shape.MaterialShapeDrawable",
             classLoader,
@@ -130,7 +130,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             Float::class.javaPrimitiveType,
             object : XC_MethodHook() {
                 override fun afterHookedMethod(param: MethodHookParam) {
-                    // Se il raggio è impostato via codice, lo forziamo al nostro radiusLarge
+                    // If the radius is set in code, force it to our radiusLarge.
                     XposedHelpers.callMethod(param.thisObject, "setCornerSize", radiusLarge)
                 }
             }
@@ -141,41 +141,41 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
         val resName = try { view.resources.getResourceEntryName(view.id) } catch (_: Exception) { "" }
         val className = view.javaClass.name.lowercase()
 
-        // 1. RICONOSCIMENTO IMMAGINI (Copertine Brani e Playlist)
-        // Usiamo il controllo sulla classe ImageView per non mancare nulla
+        // 1. Image detection (track and playlist covers).
+        // Use the ImageView class check so we do not miss anything.
         val isAvatar = className.contains("faceview") || resName.contains("face")
         val isImage = view is ImageView || className.contains("imageview") && !isAvatar
 
-        // 2. RICONOSCIMENTO HEADER E COVER (La copertina grande in alto)
+        // 2. Header and cover detection (the large cover at the top).
         val isCoverOrHeader = resName.contains("header") ||
                 resName.contains("cover") ||
                 resName.contains("art") ||
                 resName.contains("entity")
 
-        // 3. RICONOSCIMENTO SHEET E CARD
+        // 3. Sheet and card detection.
         val isSheet = className.contains("bottomsheet") || resName.contains("sheet") || resName.contains("queue")
         val isCard = className.contains("card") || resName.contains("tile")
         val isSearchBar = resName == "browse_search_bar_container" || resName.contains("search")
         val isCat = resName == "seek_frame" || resName.contains("seek")
 
-        // 4. FILTRO RIGHE (Per evitare di tagliare il testo nella libreria/playlist)
-        // Se è un contenitore (Layout) ma NON è un'immagine e NON è uno sheet
+        // 4. Row filter (to avoid clipping text in the library or playlist).
+        // If it is a container (Layout), but NOT an image and NOT a sheet.
         val isTextContainerRow = (resName.contains("row") || resName.contains("item")) && !isImage && !isSheet
 
-        // LOGICA DI SELEZIONE
+        // Selection logic.
         val shouldRound = when {
-            isAvatar -> false         // Profilo
-            isImage -> true           // Tutte le foto (piccole e grandi)
-            isCoverOrHeader -> true   // Copertina principale Radio/Playlist
-            isSheet -> true           // Menu e Coda
+            isAvatar -> false         // Profile.
+            isImage -> true           // All images, small and large.
+            isCoverOrHeader -> true   // Main radio/playlist cover.
+            isSheet -> true           // Menu and queue.
             isCard -> true            // Card Home/Search
-            isSearchBar -> true      // Barra di ricerca
+            isSearchBar -> true      // Search bar.
             isCat -> true            //
             else -> false
         }
 
         if (shouldRound) {
-            // Se è il contenitore della riga (quello che contiene testo), NON clippiamo
+            // If this is the row container (the one that contains text), do not clip it.
             if (isTextContainerRow) {
                 view.clipToOutline = false
                 return
@@ -185,10 +185,10 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             view.outlineProvider = object : ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: Outline) {
                     if (isSheet) {
-                        // Solo angoli superiori per i pannelli
+                        // Top corners only for panels.
                         outline.setRoundRect(0, 0, view.width, view.height + radiusLarge.toInt(), radiusLarge)
                     } else {
-                        // Stondamento completo per tutte le copertine (brani e header)
+                        // Full rounding for all covers (tracks and headers).
                         outline.setRoundRect(0, 0, view.width, view.height, radiusLarge)
                     }
                 }

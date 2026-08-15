@@ -17,20 +17,20 @@ import java.lang.reflect.Field
 @Suppress("UNCHECKED_CAST")
 fun SpotifyHook.UnlockPremium() {
 
-    // --- 1. SBLOCCO ATTRIBUTI (CORE PREMIUM) ---
-    // Usiamo 'after' per intercettare il risultato.
-    // Fondamentale: creiamo una copia, non modifichiamo l'oggetto originale.
+    // --- 1. ATTRIBUTE UNLOCK (CORE PREMIUM) ---
+    // Use 'after' to intercept the result.
+    // Important: create a copy, do not modify the original object.
     ::productStateProtoFingerprint.hookMethod {
         after { param ->
             val result = param.result as? Map<String, *> ?: return@after
-            // Usiamo il metodo standard che probabilmente hai già
+            // Use the standard method you probably already have.
             UnlockPremiumPatch.overrideAttributes(result)
-            // Se vuoi essere ultra-sicuro, non serve riassegnare param.result
-            // perché la mappa è stata modificata internamente.
+            // To be extra safe, there is no need to reassign param.result
+            // because the map was modified internally.
         }
     }
 
-    // --- 2. POPULAR TRACKS (PAGINA ARTISTA) ---
+    // --- 2. POPULAR TRACKS (ARTIST PAGE) ---
     ::buildQueryParametersFingerprint.hookMethod {
         after { param ->
             val result = param.result ?: return@after
@@ -74,7 +74,7 @@ fun SpotifyHook.UnlockPremium() {
             })
     }.onFailure { Logger.printDebug { "PlayerOptionOverrides hook fallito: ${it.message}" } }
 
-    // --- 5. PULIZIA CONTEXT MENU (RIMUOVI ADS) ---
+    // --- 5. CONTEXT MENU CLEANUP (REMOVE ADS) ---
     runCatching {
         val contextMenuViewModelClazz = ::contextMenuViewModelClass.clazz
         XposedBridge.hookAllConstructors(contextMenuViewModelClazz, object : XC_MethodHook() {
@@ -87,7 +87,7 @@ fun SpotifyHook.UnlockPremium() {
                     if (parameterTypes[i].name != "java.util.List") continue
                     val original = param.args[i] as? List<*> ?: continue
 
-                    // Filtriamo gli elementi che portano alla pubblicità Premium
+                    // Filter out items that lead to Premium ads.
                     val filtered = original.filter { item ->
                         val vm = item?.callMethod("getViewModel")
                         vm?.let { isPremiumUpsell.get(it) as? Boolean } != true
@@ -98,33 +98,33 @@ fun SpotifyHook.UnlockPremium() {
         })
     }.onFailure { Logger.printDebug { "ContextMenu hook fallito: ${it.message}" } }
 
-    // --- 6. RIMOZIONE SEZIONI ADS (HOME & BROWSE) ---
-    // Per la Home
+    // --- 6. REMOVE AD SECTIONS (HOME & BROWSE) ---
+    // For Home.
     ::homeStructureGetSectionsFingerprint.hookMethod {
         after { param ->
             val sections = param.result as? MutableList<*> ?: return@after
             runCatching {
-                // Forza la lista a essere modificabile (evita l'errore di lista immutabile)
+                // Force the list to be mutable (avoids immutable-list errors).
                 sections.javaClass.findFirstFieldByExactType(Boolean::class.java).set(sections, true)
                 UnlockPremiumPatch.removeHomeSections(sections)
             }
         }
     }
 
-    // Per il Browse
+    // For Browse.
     ::browseStructureGetSectionsFingerprint.hookMethod {
         after { param ->
             val sections = param.result as? MutableList<*> ?: return@after
             runCatching {
-                // Forza la lista a essere modificabile
+                // Force the list to be mutable.
                 sections.javaClass.findFirstFieldByExactType(Boolean::class.java).set(sections, true)
                 UnlockPremiumPatch.removeBrowseSections(sections)
             }
         }
     }
 
-    // --- 7. BLOCCO POPUP ADS (PENDRAGON) ---
-    // Simula un errore di rete naturale invece di bloccare la chiamata
+    // --- 7. BLOCK AD POPUPS (PENDRAGON) ---
+    // Simulate a natural network error instead of blocking the call.
     val replaceWithRxError = object : XC_MethodHook() {
         val justMethod = DexMethod("Lio/reactivex/rxjava3/core/Single;->just(Ljava/lang/Object;)Lio/reactivex/rxjava3/core/Single;").toMethod()
         val onErrorField = DexField("Lio/reactivex/rxjava3/internal/operators/single/SingleOnErrorReturn;->b:Lio/reactivex/rxjava3/functions/Function;").toField()
