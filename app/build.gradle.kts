@@ -112,7 +112,7 @@ dependencies {
     testImplementation(libs.junit.jupiter.params)
     testImplementation(libs.jadx.core)
     testImplementation(libs.slf4j.simple)
-    compileOnly(libs.xposed)
+    compileOnly(libs.libxposed)
     compileOnly(project(":stub"))
 }
 
