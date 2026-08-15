@@ -67,28 +67,16 @@ class SettingsActivity : Activity() {
 
         root.addView(createRow("Enable Premium", "Listen in any order, shuffle, or Smart Shuffle", PREF_ENABLE_PREMIUM))
         root.addView(createRow("Enable AdBlock", "Block ads and other unwanted content", PREF_ENABLE_ADBLOCK))
-        root.addView(createRow("Enable Monet Theme", "Dynamic colors based on the wallpaper", PREF_ENABLE_MONET))
-        root.addView(createRow("Enable RoundyUI", "Rounded corners on cards and images", PREF_ENABLE_ROUND_UI))
+        root.addView(createRow("Enable Monet Theme by TheWinner02", "Dynamic colors based on the wallpaper", PREF_ENABLE_MONET))
+        root.addView(createRow("Enable RoundyUI by TheWinner02", "Rounded corners on cards and images", PREF_ENABLE_ROUND_UI))
 
         root.addView(View(this).apply {
             layoutParams = LinearLayout.LayoutParams(-1, (24 * density).toInt())
         })
 
-        root.addView(Button(this).apply {
-            text = "Open Spotify"
-            setTextColor(Color.BLACK)
-            textSize = 14f
-            setTypeface(null, Typeface.BOLD)
-            background = GradientDrawable().apply {
-                setColor("#1DB954".toColorInt())
-                cornerRadius = 100f
-            }
-            layoutParams = LinearLayout.LayoutParams(-1, (48 * density).toInt())
-            setOnClickListener { openSpotify() }
-        })
 
         setContentView(ScrollView(this).apply {
-            setBackgroundColor("#121212".toColorInt())
+            setBackgroundColor("#000000".toColorInt())
             addView(root)
         })
 
