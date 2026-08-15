@@ -12,15 +12,19 @@ import io.github.chsbuffer.revancedxposed.spotify.misc.privacy.SanitizeSharingLi
 import io.github.chsbuffer.revancedxposed.spotify.misc.widgets.FixThirdPartyLaunchersWidgets
 
 @Suppress("UNCHECKED_CAST")
-class SpotifyHook(app: Application, lpparam: LoadPackageParam) : BaseHook(app, lpparam) {
-    override val hooks = arrayOf(
-        ::Extension,
-        ::SanitizeSharingLinks,
-        ::UnlockPremium,
-        ::LogOutPatch,
-        ::FixThirdPartyLaunchersWidgets,
-        //::NHB
-    )
+class SpotifyHook(
+    app: Application,
+    lpparam: LoadPackageParam,
+    enablePremium: Boolean = true
+) : BaseHook(app, lpparam) {
+    override val hooks = buildList {
+        add(::Extension)
+        add(::SanitizeSharingLinks)
+        if (enablePremium) add(::UnlockPremium)
+        add(::LogOutPatch)
+        add(::FixThirdPartyLaunchersWidgets)
+        // add(::NHB)
+    }.toTypedArray()
 
     // ══════════════════════════════════════════════════════
     // EXTENSION LOADER
@@ -69,4 +73,3 @@ class SpotifyHook(app: Application, lpparam: LoadPackageParam) : BaseHook(app, l
         }
     }
 }
-

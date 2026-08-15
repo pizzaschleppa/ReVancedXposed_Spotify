@@ -64,7 +64,7 @@ object SettingsSheet {
         // --- OPTIONS ---
         root.addView(createRow(activity, "Enable Premium", "Listen in any order, shuffle, or Smart Shuffle", "enable_premium", prefs))
         root.addView(createRow(activity, "Enable AdBlock", "Block ads and other unwanted content", "enable_adblock", prefs))
-        root.addView(createRow(activity, "Enable Momnet Theme", "Dynamic colors based on the wallpaper", "enable_monet", prefs))
+        root.addView(createRow(activity, "Enable Monet Theme", "Dynamic colors based on the wallpaper", "enable_monet", prefs))
         root.addView(createRow(activity, "Enable RoundyUI", "Rounded corners on cards and images", "enable_round_ui", prefs))
 
         // --- SPACING ---
@@ -157,12 +157,12 @@ object SettingsSheet {
         })
 
         dialog.setContentView(wrapper)
+        dialog.show()
         dialog.window?.apply {
             setLayout(-1, -1) // Full screen
             // Disable the standard Dialog animations so we can use our own.
             setWindowAnimations(0)
         }
-        dialog.show()
     }
 
     @SuppressLint("UseSwitchCompatOrMaterialCode", "SetWorldReadable")
