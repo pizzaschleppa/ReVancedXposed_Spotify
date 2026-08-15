@@ -12,13 +12,14 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.animation.OvershootInterpolator
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Switch
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.materialswitch.MaterialSwitch
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_ADBLOCK
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_MONET
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_PREMIUM
@@ -33,15 +34,23 @@ class SettingsActivity : Activity() {
 
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar)
         super.onCreate(savedInstanceState)
 
         val density = resources.displayMetrics.density
-        window.statusBarColor = "#121212".toColorInt()
-        window.navigationBarColor = "#121212".toColorInt()
+        val colorSurface = themeColor(com.google.android.material.R.attr.colorSurface, "#121212".toColorInt())
+        val colorSurfaceContainer = themeColor(com.google.android.material.R.attr.colorSurfaceContainer, "#1D1B20".toColorInt())
+        val colorOnSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, Color.WHITE)
+        val colorOnSurfaceVariant = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, "#CAC4D0".toColorInt())
+        val colorPrimary = themeColor(com.google.android.material.R.attr.colorPrimary, "#1DB954".toColorInt())
+        val colorOnPrimary = themeColor(com.google.android.material.R.attr.colorOnPrimary, Color.BLACK)
+
+        window.statusBarColor = colorSurface
+        window.navigationBarColor = colorSurface
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor("#121212".toColorInt())
+            setBackgroundColor(colorSurface)
             setPadding(
                 (24 * density).toInt(),
                 (28 * density).toInt(),
@@ -54,29 +63,52 @@ class SettingsActivity : Activity() {
             text = "ReVanced Xposed FE Settings"
             textSize = 22f
             setTypeface(null, Typeface.BOLD)
-            setTextColor(Color.WHITE)
+            setTextColor(colorOnSurface)
             setPadding(0, 0, 0, (6 * density).toInt())
         })
 
         root.addView(TextView(this).apply {
             text = "Changes apply after Spotify is restarted."
             textSize = 13f
-            setTextColor("#A0A0A0".toColorInt())
+            setTextColor(colorOnSurfaceVariant)
             setPadding(0, 0, 0, (20 * density).toInt())
         })
 
-        root.addView(createRow("Enable Premium", "Listen in any order, shuffle, or Smart Shuffle", PREF_ENABLE_PREMIUM))
-        root.addView(createRow("Enable AdBlock", "Block ads and other unwanted content", PREF_ENABLE_ADBLOCK))
-        root.addView(createRow("Enable Monet Theme by TheWinner02", "Dynamic colors based on the wallpaper", PREF_ENABLE_MONET))
-        root.addView(createRow("Enable RoundyUI by TheWinner02", "Rounded corners on cards and images", PREF_ENABLE_ROUND_UI))
+        val settingsGroup = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(colorSurfaceContainer)
+                cornerRadius = 28 * density
+            }
+            setPadding((18 * density).toInt(), (6 * density).toInt(), (18 * density).toInt(), (6 * density).toInt())
+        }
+
+        settingsGroup.addView(createRow("Enable Premium", "Listen in any order, shuffle, or Smart Shuffle", PREF_ENABLE_PREMIUM))
+        settingsGroup.addView(createDivider(colorOnSurfaceVariant))
+        settingsGroup.addView(createRow("Enable AdBlock", "Block ads and other unwanted content", PREF_ENABLE_ADBLOCK))
+        settingsGroup.addView(createDivider(colorOnSurfaceVariant))
+        settingsGroup.addView(createRow("Enable Monet Theme by TheWinner02", "Dynamic colors based on the wallpaper", PREF_ENABLE_MONET))
+        settingsGroup.addView(createDivider(colorOnSurfaceVariant))
+        settingsGroup.addView(createRow("Enable RoundyUI by TheWinner02", "Rounded corners on cards and images", PREF_ENABLE_ROUND_UI))
+        root.addView(settingsGroup)
 
         root.addView(View(this).apply {
             layoutParams = LinearLayout.LayoutParams(-1, (24 * density).toInt())
         })
 
+        root.addView(MaterialButton(this).apply {
+            text = "Open Spotify"
+            setTextColor(colorOnPrimary)
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            cornerRadius = (24 * density).toInt()
+            backgroundTintList = android.content.res.ColorStateList.valueOf(colorPrimary)
+            layoutParams = LinearLayout.LayoutParams(-1, (52 * density).toInt())
+            setOnClickListener { openSpotify() }
+        })
 
         setContentView(ScrollView(this).apply {
-            setBackgroundColor("#000000".toColorInt())
+            setBackgroundColor(colorSurface)
             addView(root)
         })
 
@@ -86,10 +118,13 @@ class SettingsActivity : Activity() {
     @SuppressLint("UseSwitchCompatOrMaterialCode")
     private fun createRow(label: String, subtitle: String, key: String): LinearLayout {
         val density = resources.displayMetrics.density
+        val colorOnSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, Color.WHITE)
+        val colorOnSurfaceVariant = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, "#CAC4D0".toColorInt())
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, (14 * density).toInt(), 0, (14 * density).toInt())
+            minimumHeight = (72 * density).toInt()
+            setPadding(0, (10 * density).toInt(), 0, (10 * density).toInt())
             isClickable = true
             val outValue = android.util.TypedValue()
             theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
@@ -102,40 +137,48 @@ class SettingsActivity : Activity() {
         }
         textContainer.addView(TextView(this).apply {
             text = label
-            setTextColor(Color.WHITE)
+            setTextColor(colorOnSurface)
             textSize = 16f
             setTypeface(null, Typeface.BOLD)
         })
         textContainer.addView(TextView(this).apply {
             text = subtitle
-            setTextColor("#A0A0A0".toColorInt())
+            setTextColor(colorOnSurfaceVariant)
             textSize = 12f
         })
         row.addView(textContainer)
 
-        val toggle = Switch(this).apply {
+        val toggle = MaterialSwitch(this).apply {
             isChecked = prefs.getBoolean(key, true)
-            val spotifyGreen = "#1DB954".toColorInt()
-            thumbDrawable?.setTint(if (isChecked) spotifyGreen else Color.GRAY)
-            scaleX = 1.25f
-            scaleY = 1.25f
             setOnCheckedChangeListener { view, isChecked ->
-                view.animate().scaleX(1.1f).scaleY(1.1f).setDuration(100).withEndAction {
+                view.animate().scaleX(0.95f).scaleY(0.95f).setDuration(100).withEndAction {
                     view.animate()
-                        .scaleX(1.25f)
-                        .scaleY(1.25f)
+                        .scaleX(1f)
+                        .scaleY(1f)
                         .setDuration(150)
                         .setInterpolator(OvershootInterpolator(2f))
                         .start()
                 }.start()
                 prefs.edit(commit = true) { putBoolean(key, isChecked) }
-                thumbDrawable?.setTint(if (isChecked) spotifyGreen else Color.GRAY)
                 makePrefsReadable()
             }
         }
         row.setOnClickListener { toggle.isChecked = !toggle.isChecked }
         row.addView(toggle)
         return row
+    }
+
+    private fun createDivider(color: Int): View {
+        val density = resources.displayMetrics.density
+        return View(this).apply {
+            alpha = 0.24f
+            setBackgroundColor(color)
+            layoutParams = LinearLayout.LayoutParams(-1, (1 * density).toInt())
+        }
+    }
+
+    private fun themeColor(attr: Int, fallback: Int): Int {
+        return MaterialColors.getColor(this, attr, fallback)
     }
 
     private fun makePrefsReadable() {
