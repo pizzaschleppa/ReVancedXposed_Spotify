@@ -42,7 +42,7 @@ class SettingsActivity : Activity() {
         val colorSurfaceContainer = themeColor(com.google.android.material.R.attr.colorSurfaceContainer, "#1D1B20".toColorInt())
         val colorOnSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, Color.WHITE)
         val colorOnSurfaceVariant = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, "#CAC4D0".toColorInt())
-        val colorPrimary = themeColor(com.google.android.material.R.attr.colorPrimary, "#1DB954".toColorInt())
+    //    val colorPrimary = themeColor(com.google.android.material.R.attr.colorPrimary, "#1DB954".toColorInt())
         val colorOnPrimary = themeColor(com.google.android.material.R.attr.colorOnPrimary, Color.BLACK)
 
         window.statusBarColor = colorSurface
