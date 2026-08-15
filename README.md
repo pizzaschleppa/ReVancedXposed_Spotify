@@ -33,12 +33,11 @@ Remember: if you are not paying for the product, **you** are the product.
 ### Spotify
 - Unlock Spotify Premium
 - Sanitize sharing links
-- Monet theme by TheWinner02
-- RoundyUI by Thewinner02
-- Module menu by TheWinner02
+- Monet theme by TheWinner02 (toggle in settings)
+- RoundyUI by Thewinner02 (toggle in settings)
 
 ## Downloads
-- **Release build**: [Download](https://github.com/TheWinner02/ReVancedXposed_Spotify/releases/latest)
+- **Release build**: [Download](https://github.com/pizzaschleppa/ReVancedXposed_Spotify/releases)
 
 > [!NOTE]  
 > The package name and signature of this build are different every day. You don't have to reinstall it every day.
