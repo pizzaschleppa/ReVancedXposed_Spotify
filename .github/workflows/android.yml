@@ -8,6 +8,12 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [ "main" ]
+    paths-ignore: 
+      - ".github/**"
+      - ".gitignore"
+      - ".gitmodules"
+      - "README.md"
+      - "DEVELOPMENT.md"
 
 jobs:
   build:
