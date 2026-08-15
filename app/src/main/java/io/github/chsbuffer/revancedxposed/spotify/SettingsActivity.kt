@@ -87,9 +87,9 @@ class SettingsActivity : Activity() {
         settingsGroup.addView(createDivider(colorOnSurfaceVariant))
         settingsGroup.addView(createRow("Enable AdBlock", "Block ads and other unwanted content", PREF_ENABLE_ADBLOCK))
         settingsGroup.addView(createDivider(colorOnSurfaceVariant))
-        settingsGroup.addView(createRow("Enable Monet Theme by TheWinner02", "Dynamic colors based on the wallpaper", PREF_ENABLE_MONET))
+        settingsGroup.addView(createRow("Enable Monet Theme by TheWinner02", "Dynamic colors based on the wallpaper", PREF_ENABLE_MONET, false))
         settingsGroup.addView(createDivider(colorOnSurfaceVariant))
-        settingsGroup.addView(createRow("Enable RoundyUI by TheWinner02", "Rounded corners on cards and images", PREF_ENABLE_ROUND_UI))
+        settingsGroup.addView(createRow("Enable RoundyUI by TheWinner02", "Rounded corners on cards and images", PREF_ENABLE_ROUND_UI, false))
         root.addView(settingsGroup)
 
         root.addView(View(this).apply {
@@ -116,7 +116,7 @@ class SettingsActivity : Activity() {
     }
 
     @SuppressLint("UseSwitchCompatOrMaterialCode")
-    private fun createRow(label: String, subtitle: String, key: String): LinearLayout {
+    private fun createRow(label: String, subtitle: String, key: String, defaultValue: Boolean = true): LinearLayout {
         val density = resources.displayMetrics.density
         val colorOnSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, Color.WHITE)
         val colorOnSurfaceVariant = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, "#CAC4D0".toColorInt())
@@ -149,7 +149,7 @@ class SettingsActivity : Activity() {
         row.addView(textContainer)
 
         val toggle = MaterialSwitch(this).apply {
-            isChecked = prefs.getBoolean(key, true)
+            isChecked = prefs.getBoolean(key, defaultValue)
             setOnCheckedChangeListener { view, isChecked ->
                 view.animate().scaleX(0.95f).scaleY(0.95f).setDuration(100).withEndAction {
                     view.animate()
