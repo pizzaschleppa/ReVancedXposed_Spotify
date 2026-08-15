@@ -15,6 +15,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
+import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_ADBLOCK
@@ -32,6 +33,7 @@ class SettingsActivity : Activity() {
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar)
+        DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
 
         val density = resources.displayMetrics.density
