@@ -102,7 +102,7 @@ class SettingsActivity : Activity() {
             textSize = 14f
             setTypeface(null, Typeface.BOLD)
             cornerRadius = (24 * density).toInt()
-            backgroundTintList = android.content.res.ColorStateList.valueOf(colorPrimary)
+        //    backgroundTintList = android.content.res.ColorStateList.valueOf(colorPrimary)
             layoutParams = LinearLayout.LayoutParams(-1, (52 * density).toInt())
             setOnClickListener { openSpotify() }
         })
