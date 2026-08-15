@@ -9,7 +9,7 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
 
     fun hook() {
         val cl = lpparam.classLoader
-        XposedBridge.log("RE-VANCED XPOSED: Avvio AdBlocker (Refined)")
+        XposedBridge.log("RE-VANCED XPOSED: Starting AdBlocker (Refined)")
 
         // ==========================================
         // 1. FLAG PATCH (legacy/compat)
@@ -27,7 +27,9 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
                     }
                 }
             })
-            XposedBridge.log("AdBlocker: Hook impostato su LoadedFlags")
+            XposedBridge.log("AdBlocker: Hook set on LoadedFlags")
+        }.onFailure {
+            XposedBridge.log("AdBlocker: Hook failed on LoadedFlags - ${it.message}")
         }
 
         // ==========================================
@@ -41,7 +43,9 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
                     param.result = false
                 }
             })
-            XposedBridge.log("AdBlocker: Hook impostato su AdsSettings")
+            XposedBridge.log("AdBlocker: Hook set on AdsSettings")
+        }.onFailure {
+            XposedBridge.log("AdBlocker: Hook failed on AdsSettings - ${it.message}")
         }
 
         // ==========================================
@@ -55,7 +59,9 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
                     param.result = null
                 }
             })
-            XposedBridge.log("AdBlocker: Hook impostato su CountdownBarView (Hiding)")
+            XposedBridge.log("AdBlocker: Hook set on CountdownBarView (Hiding)")
+        }.onFailure {
+            XposedBridge.log("AdBlocker: Hook failed on CountdownBarView - ${it.message}")
         }
     }
 }

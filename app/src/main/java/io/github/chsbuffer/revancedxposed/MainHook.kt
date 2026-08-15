@@ -55,10 +55,10 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
             try {
                 if (prefs.getBoolean(PREF_ENABLE_ADBLOCK, true)) {
                     AdBlockHook(lpparam).hook()
-                    XposedBridge.log("AdBlocker: Modulo attivato")
+                    XposedBridge.log("AdBlocker: Module activated")
                 }
             } catch (e: Exception) {
-                XposedBridge.log("AdBlocker fallito: ${e.message}")
+                XposedBridge.log("AdBlocker failed: ${e.message}")
             }
 
             // --- MONET BLOCK ---
@@ -67,7 +67,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                     ThemeHook(app, lpparam).hook()
                 }
             } catch (e: Exception) {
-                XposedBridge.log("Mod Monet fallita: ${e.message}")
+                XposedBridge.log("Monet Mod failed: ${e.message}")
             }
 
             // --- ROUNDY BLOCK (the main suspect) ---
@@ -76,7 +76,7 @@ class MainHook : IXposedHookLoadPackage, IXposedHookZygoteInit {
                     RoundyUIHook(lpparam).hook()
                 }
             } catch (e: Exception) {
-                XposedBridge.log("Mod Roundy fallita: ${e.message}")
+                XposedBridge.log("Roundy Mod failed: ${e.message}")
             }
             
         }

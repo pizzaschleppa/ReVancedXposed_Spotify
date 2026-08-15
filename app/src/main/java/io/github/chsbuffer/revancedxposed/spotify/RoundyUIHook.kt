@@ -2,7 +2,6 @@ package io.github.chsbuffer.revancedxposed.spotify
 
 import android.content.res.Resources
 import android.graphics.Outline
-import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewOutlineProvider
@@ -23,7 +22,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
 
     private val radiusLarge = dpToPx(28f)
     private val radiusFull = dpToPx(100f)
-    private val TAG = "SpotifyRoundyUIDebug"
+    private val radiusThreshold = dpToPx(15f)
 
     fun hook() {
         val classLoader = lpparam.classLoader
@@ -87,7 +86,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     val original = param.args[0] as Float
-                    param.args[0] = if (original > dpToPx(15f)) radiusFull else radiusLarge
+                    param.args[0] = if (original > radiusThreshold) radiusFull else radiusLarge
                 }
             }
         )
@@ -144,7 +143,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
         // 1. Image detection (track and playlist covers).
         // Use the ImageView class check so we do not miss anything.
         val isAvatar = className.contains("faceview") || resName.contains("face")
-        val isImage = view is ImageView || className.contains("imageview") && !isAvatar
+        val isImage = (view is ImageView || className.contains("imageview")) && !isAvatar
 
         // 2. Header and cover detection (the large cover at the top).
         val isCoverOrHeader = resName.contains("header") ||
@@ -175,13 +174,6 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
         }
 
         if (shouldRound) {
-            // If this is the row container (the one that contains text), do not clip it.
-            if (isTextContainerRow) {
-                view.clipToOutline = false
-                return
-            }
-
-            view.clipToOutline = true
             view.outlineProvider = object : ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: Outline) {
                     if (isSheet) {

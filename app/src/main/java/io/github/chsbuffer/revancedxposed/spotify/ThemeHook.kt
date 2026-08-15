@@ -8,11 +8,12 @@ import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
 import androidx.core.graphics.toColorInt
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 
 class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackageParam) {
 
-    private val colorCache = HashMap<Int, Int>()
+    private val colorCache = ConcurrentHashMap<Int, Int>()
     private val res = app.resources
 
     // --- MONET'S COLORS ---
@@ -209,8 +210,10 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
                         view.visibility = View.GONE
 
                         // Optional: Set the dimensions to 0 just to be safe
-                        view.layoutParams.width = 0
-                        view.layoutParams.height = 0
+                        view.layoutParams?.let {
+                            it.width = 0
+                            it.height = 0
+                        }
                     }
 
                     // Bonus: Let's Remove the Fading Edge from Lists (RecyclerView)

@@ -72,7 +72,7 @@ fun SpotifyHook.UnlockPremium() {
                     param.thisObject.callMethod("shufflingContext", false)
                 }
             })
-    }.onFailure { Logger.printDebug { "PlayerOptionOverrides hook fallito: ${it.message}" } }
+    }.onFailure { Logger.printDebug { "PlayerOptionOverrides hook failed: ${it.message}" } }
 
     // --- 5. CONTEXT MENU CLEANUP (REMOVE ADS) ---
     runCatching {
@@ -96,7 +96,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         })
-    }.onFailure { Logger.printDebug { "ContextMenu hook fallito: ${it.message}" } }
+    }.onFailure { Logger.printDebug { "ContextMenu hook failed: ${it.message}" } }
 
     // --- 6. REMOVE AD SECTIONS (HOME & BROWSE) ---
     // For Home.
@@ -133,7 +133,9 @@ fun SpotifyHook.UnlockPremium() {
             if (!param.result.javaClass.name.endsWith("SingleOnErrorReturn")) return
             runCatching {
                 val errorFunc = onErrorField.get(param.result)
-                param.result = justMethod.invoke(null, errorFunc)
+                val applyMethod = errorFunc.javaClass.getMethod("apply", java.lang.Object::class.java)
+                val fallbackValue = applyMethod.invoke(errorFunc, Exception("Pendragon block"))
+                param.result = justMethod.invoke(null, fallbackValue)
             }
         }
     }

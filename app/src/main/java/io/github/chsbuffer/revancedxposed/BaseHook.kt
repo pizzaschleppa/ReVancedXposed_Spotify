@@ -140,6 +140,8 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
     abstract val hooks: Array<HookFunction>
     private val appliedHooks = mutableSetOf<HookFunction>()
     private val failedHooks = mutableListOf<HookFunction>()
+    
+    private val packageInfo by lazy { app.packageManager.getPackageInfo(app.packageName, 0) }
 
     // cache
     private val moduleRel = BuildConfig.COMMIT_HASH
@@ -162,11 +164,9 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
         Logger.printDebug { "${lpparam.packageName} handleLoadPackage: ${t}ms" }
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun tryLoadCache() {
         // cache by host update time + module version
         // also no cache if is DEBUG
-        val packageInfo = app.packageManager.getPackageInfo(app.packageName, 0)
 
         val id = "${packageInfo.lastUpdateTime}-$moduleRel"
         val cachedId = cache.get("id", null)
@@ -216,7 +216,6 @@ abstract class BaseHook(private val app: Application, val lpparam: LoadPackagePa
     }
 
     private fun getAppVersion(): String {
-        val packageInfo = app.packageManager.getPackageInfo(app.packageName, 0)
         val versionName = packageInfo.versionName
         val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             packageInfo.longVersionCode
