@@ -3,11 +3,9 @@ package io.github.chsbuffer.revancedxposed.spotify
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
@@ -17,7 +15,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.edit
 import androidx.core.graphics.toColorInt
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.materialswitch.MaterialSwitch
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_ADBLOCK
@@ -91,21 +88,6 @@ class SettingsActivity : Activity() {
         settingsGroup.addView(createDivider(colorOnSurfaceVariant))
         settingsGroup.addView(createRow("Enable RoundyUI by TheWinner02", "Rounded corners on cards and images", PREF_ENABLE_ROUND_UI, false))
         root.addView(settingsGroup)
-
-        root.addView(View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(-1, (24 * density).toInt())
-        })
-
-        root.addView(MaterialButton(this).apply {
-            text = "Open Spotify"
-            setTextColor(colorOnPrimary)
-            textSize = 14f
-            setTypeface(null, Typeface.BOLD)
-            cornerRadius = (24 * density).toInt()
-        //    backgroundTintList = android.content.res.ColorStateList.valueOf(colorPrimary)
-            layoutParams = LinearLayout.LayoutParams(-1, (52 * density).toInt())
-            setOnClickListener { openSpotify() }
-        })
 
         setContentView(ScrollView(this).apply {
             setBackgroundColor(colorSurface)
@@ -188,11 +170,5 @@ class SettingsActivity : Activity() {
                 prefsFile.setReadable(true, false)
             }
         }
-    }
-
-    private fun openSpotify() {
-        val intent = packageManager.getLaunchIntentForPackage("com.spotify.music")
-            ?: Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.spotify.music"))
-        startActivity(intent)
     }
 }
