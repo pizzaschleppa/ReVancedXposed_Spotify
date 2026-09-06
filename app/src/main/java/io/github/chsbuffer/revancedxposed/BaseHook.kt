@@ -5,10 +5,7 @@ import android.app.Application
 import android.os.Build
 import app.revanced.extension.shared.Logger
 import app.revanced.extension.shared.Utils
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
+
 import io.github.chsbuffer.revancedxposed.BuildConfig.DEBUG
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable

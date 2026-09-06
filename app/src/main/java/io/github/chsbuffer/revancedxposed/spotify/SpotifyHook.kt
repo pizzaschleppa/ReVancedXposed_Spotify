@@ -1,9 +1,10 @@
 package io.github.chsbuffer.revancedxposed.spotify
 
 import android.app.Application
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
+import io.github.chsbuffer.revancedxposed.HookParam
+import io.github.chsbuffer.revancedxposed.LoadPackageParam
+import io.github.chsbuffer.revancedxposed.XC_MethodHook
+import io.github.chsbuffer.revancedxposed.XposedBridge
 import io.github.chsbuffer.revancedxposed.BaseHook
 import io.github.chsbuffer.revancedxposed.injectHostClassLoaderToSelf
 import io.github.chsbuffer.revancedxposed.spotify.misc.UnlockPremium
@@ -54,7 +55,7 @@ class SpotifyHook(
                 httpConnectionImpl,
                 "send",
                 object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
+                    override fun beforeHookedMethod(param: HookParam) {
                         val req = param.args[0]
                         val url = urlField.get(req) as? String ?: return
 

@@ -4,14 +4,15 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.graphics.Color
 import android.view.View
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage
+import io.github.chsbuffer.revancedxposed.HookParam
+import io.github.chsbuffer.revancedxposed.LoadPackageParam
+import io.github.chsbuffer.revancedxposed.XC_MethodHook
+import io.github.chsbuffer.revancedxposed.XposedHelpers
 import androidx.core.graphics.toColorInt
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 
-class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackageParam) {
+class ThemeHook(app: Application, private val lpparam: LoadPackageParam) {
 
     private val colorCache = ConcurrentHashMap<Int, Int>()
     private val res = app.resources
@@ -51,7 +52,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             Int::class.javaPrimitiveType,
             android.graphics.PorterDuff.Mode::class.java,
             object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+                override fun beforeHookedMethod(param: HookParam) {
                     param.args[0] = replaceColorLogic(param.args[0] as Int)
                 }
             }
@@ -65,7 +66,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             IntArray::class.java,
             Int::class.javaPrimitiveType,
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     val states = param.args[0] as IntArray
                     val originalColor = param.result as Int
 
@@ -102,7 +103,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             "parseColor",
             String::class.java,
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     param.result = replaceColorLogic(param.result as Int)
                 }
             }
@@ -115,7 +116,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             "setColor",
             Int::class.javaPrimitiveType,
             object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+                override fun beforeHookedMethod(param: HookParam) {
                     param.args[0] = replaceColorLogic(param.args[0] as Int)
                 }
             }
@@ -128,7 +129,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             "setColors",
             IntArray::class.java,
             object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+                override fun beforeHookedMethod(param: HookParam) {
                     val colors = param.args[0] as IntArray
                     for (i in colors.indices) colors[i] = replaceColorLogic(colors[i])
                 }
@@ -143,7 +144,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             Int::class.javaPrimitiveType,
             "android.content.res.Resources.Theme",
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     val color = param.result as Int
                     param.result = replaceColorLogic(color)
                 }
@@ -178,7 +179,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             Int::class.javaPrimitiveType,
             Int::class.javaPrimitiveType,
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     val color = param.result as Int
                     param.result = replaceColorLogic(color)
                 }
@@ -191,7 +192,7 @@ class ThemeHook(app: Application, private val lpparam: XC_LoadPackage.LoadPackag
             classLoader,
             "onAttachedToWindow",
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     val view = param.thisObject as View
 
                     // We retrieve the ID name (e.g., “shadow,” “fade_overlay”)

@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import app.revanced.extension.shared.Logger;
-import de.robv.android.xposed.XposedHelpers;
+import io.github.chsbuffer.revancedxposed.XposedHelpers;
 
 @SuppressWarnings("unused")
 public final class UnlockPremiumPatch {

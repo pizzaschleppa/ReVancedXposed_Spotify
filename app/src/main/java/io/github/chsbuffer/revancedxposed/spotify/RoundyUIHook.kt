@@ -6,11 +6,12 @@ import android.util.TypedValue
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.widget.ImageView
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage
+import io.github.chsbuffer.revancedxposed.HookParam
+import io.github.chsbuffer.revancedxposed.LoadPackageParam
+import io.github.chsbuffer.revancedxposed.XC_MethodHook
+import io.github.chsbuffer.revancedxposed.XposedHelpers
 
-class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
+class RoundyUIHook(private val lpparam: LoadPackageParam) {
 
     private fun dpToPx(dp: Float): Float {
         return TypedValue.applyDimension(
@@ -55,7 +56,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             classLoader,
             "onAttachedToWindow",
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     val view = param.thisObject as View
                     applyRoundingIfTarget(view)
                 }
@@ -70,7 +71,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             "setImageDrawable",
             android.graphics.drawable.Drawable::class.java,
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     val imageView = param.thisObject as ImageView
                     applyRoundingIfTarget(imageView)
                 }
@@ -84,7 +85,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             "setCornerRadius",
             Float::class.javaPrimitiveType,
             object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+                override fun beforeHookedMethod(param: HookParam) {
                     val original = param.args[0] as Float
                     param.args[0] = if (original > radiusThreshold) radiusFull else radiusLarge
                 }
@@ -100,7 +101,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             View::class.java,
             Int::class.javaPrimitiveType,
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     val view = param.args[1] as View
 
                     // Apply rounding only to the TOP corners (top left and top right).
@@ -128,7 +129,7 @@ class RoundyUIHook(private val lpparam: XC_LoadPackage.LoadPackageParam) {
             "setInterpolation",
             Float::class.javaPrimitiveType,
             object : XC_MethodHook() {
-                override fun afterHookedMethod(param: MethodHookParam) {
+                override fun afterHookedMethod(param: HookParam) {
                     // If the radius is set in code, force it to our radiusLarge.
                     XposedHelpers.callMethod(param.thisObject, "setCornerSize", radiusLarge)
                 }

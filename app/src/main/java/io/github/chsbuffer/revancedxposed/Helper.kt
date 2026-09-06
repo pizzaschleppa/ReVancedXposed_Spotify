@@ -1,20 +1,62 @@
 package io.github.chsbuffer.revancedxposed
 
-import android.content.res.loader.ResourcesLoader
-import android.content.res.loader.ResourcesProvider
-import android.os.Build
-import android.os.ParcelFileDescriptor
-import androidx.annotation.RequiresApi
-import de.robv.android.xposed.IXposedHookZygoteInit
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
-import java.io.File
+import android.content.pm.ApplicationInfo
+import io.github.libxposed.api.XposedInterface
+import java.lang.reflect.Constructor
+import java.lang.reflect.Executable
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Member
+import java.lang.reflect.Method
 
-typealias IScopedHookCallback = ScopedHookParam.(MethodHookParam) -> Unit
-typealias IHookCallback = (MethodHookParam) -> Unit
+/**
+ * Parameter passed to hook callbacks, providing access to method details,
+ * arguments, receiver object, and control over execution and return values.
+ */
+class HookParam(
+    val chain: XposedInterface.Chain,
+    val method: Executable = chain.executable,
+    var thisObject: Any? = chain.thisObject,
+    val args: Array<Any?> = chain.args.toTypedArray()
+) {
+    var isSkipped: Boolean = false
+    var result: Any? = null
+        set(value) {
+            field = value
+            isSkipped = true
+        }
+
+    var throwable: Throwable? = null
+
+    fun setResult(result: Any?) {
+        this.result = result
+        this.isSkipped = true
+    }
+
+    fun invokeOriginalMethod(args: Array<Any?> = this.args): Any? {
+        val methodObj = method as? Method ?: throw IllegalStateException("Executable is not a Method: $method")
+        val invoker = MainHook.module.getInvoker(methodObj).setType(XposedInterface.Invoker.Type.ORIGIN)
+        return invoker.invoke(thisObject, *args)
+    }
+}
+
+typealias MethodHookParam = HookParam
+typealias IHookCallback = (HookParam) -> Unit
+typealias IScopedHookCallback = ScopedHookParam.(HookParam) -> Unit
+
+open class XC_MethodHook {
+    open fun beforeHookedMethod(param: HookParam) {}
+    open fun afterHookedMethod(param: HookParam) {}
+}
+
+object XC_MethodReplacement {
+    fun returnConstant(value: Any?): XC_MethodHook {
+        return object : XC_MethodHook() {
+            override fun beforeHookedMethod(param: HookParam) {
+                param.result = value
+            }
+        }
+    }
+}
 
 class HookDsl<TCallback>(emptyCallback: TCallback) {
     var before: TCallback = emptyCallback
@@ -29,23 +71,155 @@ class HookDsl<TCallback>(emptyCallback: TCallback) {
     }
 }
 
-inline fun Member.hookMethod(crossinline block: HookDsl<IHookCallback>.() -> Unit) {
+fun Executable.hookMethod(block: HookDsl<IHookCallback>.() -> Unit): XposedInterface.HookHandle {
     val builder = HookDsl<IHookCallback> {}.apply(block)
-    hookMethodInternal(builder.before, builder.after)
+    return hookMethodInternal(this, builder.before, builder.after)
 }
 
-inline fun Member.hookMethodInternal(
-    crossinline before: IHookCallback, crossinline after: IHookCallback
-) {
-    XposedBridge.hookMethod(this, object : XC_MethodHook() {
-        override fun beforeHookedMethod(param: XC_MethodHook.MethodHookParam) {
+fun Executable.hookMethod(callback: XC_MethodHook): XposedInterface.HookHandle {
+    return hookMethodInternal(this, { callback.beforeHookedMethod(it) }, { callback.afterHookedMethod(it) })
+}
+
+fun Member.hookMethod(block: HookDsl<IHookCallback>.() -> Unit): XposedInterface.HookHandle {
+    val executable = this as? Executable ?: throw IllegalArgumentException("Member is not an Executable: $this")
+    return executable.hookMethod(block)
+}
+
+fun Member.hookMethod(callback: XC_MethodHook): XposedInterface.HookHandle {
+    val executable = this as? Executable ?: throw IllegalArgumentException("Member is not an Executable: $this")
+    return executable.hookMethod(callback)
+}
+
+fun hookMethodInternal(
+    executable: Executable,
+    before: IHookCallback,
+    after: IHookCallback
+): XposedInterface.HookHandle {
+    return MainHook.module.hook(executable).intercept { chain ->
+        val param = HookParam(chain)
+
+        try {
             before(param)
+        } catch (t: Throwable) {
+            MainHook.log("HookEngine", "Error in before hook for ${executable.name}", t)
         }
 
-        override fun afterHookedMethod(param: XC_MethodHook.MethodHookParam) {
-            after(param)
+        if (param.isSkipped) {
+            return@intercept param.result
         }
-    })
+
+        var argsModified = false
+        val origArgs = chain.args
+        if (param.args.size == origArgs.size) {
+            for (i in param.args.indices) {
+                if (param.args[i] !== origArgs[i]) {
+                    argsModified = true
+                    break
+                }
+            }
+        } else {
+            argsModified = true
+        }
+
+        val res = try {
+            if (param.thisObject !== chain.thisObject && param.thisObject != null) {
+                if (argsModified) {
+                    chain.proceedWith(param.thisObject!!, param.args)
+                } else {
+                    chain.proceedWith(param.thisObject!!)
+                }
+            } else {
+                if (argsModified) {
+                    chain.proceed(param.args)
+                } else {
+                    chain.proceed()
+                }
+            }
+        } catch (t: Throwable) {
+            param.throwable = t
+            null
+        }
+
+        // Set result for after callback without triggering isSkipped
+        param.isSkipped = false
+        param.result = res
+
+        try {
+            after(param)
+        } catch (t: Throwable) {
+            MainHook.log("HookEngine", "Error in after hook for ${executable.name}", t)
+        }
+
+        if (param.throwable != null && param.result === res) {
+            throw param.throwable!!
+        }
+
+        param.result
+    }
+}
+
+object XposedBridge {
+    fun log(msg: String) {
+        MainHook.log("ReVancedXposed", msg)
+    }
+
+    fun log(tr: Throwable) {
+        MainHook.log("ReVancedXposed", tr.message ?: "Exception", tr)
+    }
+
+    fun hookMethod(member: Member, callback: XC_MethodHook): XposedInterface.HookHandle {
+        return (member as Executable).hookMethod(callback)
+    }
+
+    fun hookMethod(member: Member, block: HookDsl<IHookCallback>.() -> Unit): XposedInterface.HookHandle {
+        return (member as Executable).hookMethod(block)
+    }
+
+    fun hookAllMethods(clazz: Class<*>, methodName: String, callback: XC_MethodHook): List<XposedInterface.HookHandle> {
+        val handles = mutableListOf<XposedInterface.HookHandle>()
+        for (m in clazz.declaredMethods) {
+            if (m.name == methodName) {
+                handles.add(m.hookMethod(callback))
+            }
+        }
+        return handles
+    }
+
+    fun hookAllMethods(clazz: Class<*>, methodName: String, block: HookDsl<IHookCallback>.() -> Unit): List<XposedInterface.HookHandle> {
+        val handles = mutableListOf<XposedInterface.HookHandle>()
+        for (m in clazz.declaredMethods) {
+            if (m.name == methodName) {
+                handles.add(m.hookMethod(block))
+            }
+        }
+        return handles
+    }
+
+    fun hookAllConstructors(clazz: Class<*>, callback: XC_MethodHook): List<XposedInterface.HookHandle> {
+        val handles = mutableListOf<XposedInterface.HookHandle>()
+        for (c in clazz.declaredConstructors) {
+            handles.add(c.hookMethod(callback))
+        }
+        return handles
+    }
+
+    fun hookAllConstructors(clazz: Class<*>, block: HookDsl<IHookCallback>.() -> Unit): List<XposedInterface.HookHandle> {
+        val handles = mutableListOf<XposedInterface.HookHandle>()
+        for (c in clazz.declaredConstructors) {
+            handles.add(c.hookMethod(block))
+        }
+        return handles
+    }
+
+    fun invokeOriginalMethod(method: Member, thisObject: Any?, args: Array<Any?>?): Any? {
+        val methodObj = method as? Method ?: throw IllegalStateException("Member is not a Method: $method")
+        val invoker = MainHook.module.getInvoker(methodObj).setType(XposedInterface.Invoker.Type.ORIGIN)
+        return if (args == null || args.isEmpty()) {
+            invoker.invoke(thisObject)
+        } else {
+            invoker.invoke(thisObject, *args)
+        }
+    }
 }
 
 @JvmInline
@@ -75,20 +249,19 @@ class ScopedHook : XC_MethodHook() {
         crossinline before: IScopedHookCallback,
         crossinline after: IScopedHookCallback
     ) {
-        XposedBridge.hookMethod(hookMethod, object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: MethodHookParam) {
-                val outerParam = outerParam.get() ?: return
+        (hookMethod as Executable).hookMethod {
+            before { param ->
+                val outerParam = outerParam.get() ?: return@before
                 before(ScopedHookParam(outerParam), param)
             }
-
-            override fun afterHookedMethod(param: MethodHookParam) {
-                val outerParam = outerParam.get() ?: return
+            after { param ->
+                val outerParam = outerParam.get() ?: return@after
                 after(ScopedHookParam(outerParam), param)
             }
-        })
+        }
     }
 
-    val outerParam: ThreadLocal<XC_MethodHook.MethodHookParam> = ThreadLocal<MethodHookParam>()
+    val outerParam: ThreadLocal<HookParam> = ThreadLocal<HookParam>()
 
     override fun beforeHookedMethod(param: MethodHookParam) {
         outerParam.set(param)
@@ -99,47 +272,24 @@ class ScopedHook : XC_MethodHook() {
     }
 }
 
-lateinit var XposedInit: IXposedHookZygoteInit.StartupParam
-
-private val resourceLoader by lazy @RequiresApi(Build.VERSION_CODES.R) {
-    val fileDescriptor = ParcelFileDescriptor.open(
-        File(XposedInit.modulePath), ParcelFileDescriptor.MODE_READ_ONLY
-    )
-    val provider = ResourcesProvider.loadFromApk(fileDescriptor)
-    val loader = ResourcesLoader()
-    loader.addProvider(provider)
-    return@lazy loader
+/**
+ * Compatible LoadPackageParam representation for LibXposed callbacks.
+ */
+data class PackageParam(
+    val packageName: String,
+    val classLoader: ClassLoader,
+    val appInfo: ApplicationInfo,
+    val isFirstPackage: Boolean = true
+) {
+    val isFirstApplication get() = isFirstPackage
 }
+
+typealias LoadPackageParam = PackageParam
 
 fun injectHostClassLoaderToSelf(self: ClassLoader, host: ClassLoader) {
     val findClassMethod =
         XposedHelpers.findMethodExact(ClassLoader::class.java, "findClass", String::class.java)
     self.setObjectField("parent", object : ClassLoader(self.parent) {
-        /**
-         * In the context of Xposed modules, the class loading hierarchy can be complex.
-         * The module's classes are loaded by its own ClassLoader (`self`).
-         * The host application's classes are loaded by its ClassLoader (`host`).
-         *
-         * The goal here is to allow the module to access classes from the host application.
-         * We achieve this by creating a new ClassLoader that becomes the parent of `self`.
-         * This new parent ClassLoader will first attempt to load classes using `self.findClass()`.
-         * If that fails, it will then try to load the class from the `host` ClassLoader.
-         *
-         * This explicit ordering is crucial for compatibility with various Xposed frameworks:
-         * - **LSPosed:** LSPosed's `LspModuleClassLoader` already prioritizes its own `findClass`
-         *   before delegating to `parent.loadClass`. So, this customization might seem redundant for LSPosed.
-         *
-         * - **Other Xposed Frameworks:** Other frameworks might use a standard `PathClassLoader`
-         *   as the module's ClassLoader. A standard `PathClassLoader` typically delegates to
-         *   `parent.loadClass` *before* attempting `findClass` itself. If the host ClassLoader's parent
-         *   is replaced with another intermediary ClassLoader that attempts to load classes from the module
-         *   (see `SponsorBlockPatch.kt`), it could lead to infinite recursion.
-         *
-         * By inserting this intermediary ClassLoader and overriding `findClass` to prioritize
-         * `self.findClass()`, we ensure that the module's classes are always checked first,
-         * preventing potential infinite recursion and ensuring that stubbed classes are loaded
-         * from the host only as a fallback.
-         */
         override fun findClass(name: String): Class<*> {
             try {
                 return findClassMethod(self, name) as Class<*>

@@ -1,9 +1,10 @@
 package io.github.chsbuffer.revancedxposed.spotify
 
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
-import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam
+import io.github.chsbuffer.revancedxposed.HookParam
+import io.github.chsbuffer.revancedxposed.LoadPackageParam
+import io.github.chsbuffer.revancedxposed.XC_MethodHook
+import io.github.chsbuffer.revancedxposed.XposedBridge
+import io.github.chsbuffer.revancedxposed.XposedHelpers
 
 class AdBlockHook(private val lpparam: LoadPackageParam) {
 
@@ -20,7 +21,7 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
         runCatching {
             val flagsClass = cl.loadClass("com.spotify.connectivity.flags.LoadedFlags")
             XposedBridge.hookAllMethods(flagsClass, "get", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+                override fun beforeHookedMethod(param: HookParam) {
                     val key = runCatching { XposedHelpers.getObjectField(param.args[0], "identifier") as? String }.getOrNull()
                     if (key == "ads") {
                         param.result = false
@@ -39,7 +40,7 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
             // Try to find known classes that manage ad state.
             val adsClass = cl.loadClass("com.spotify.adsinternal.adscore.AdsSettings")
             XposedBridge.hookAllMethods(adsClass, "isAdsEnabled", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+                override fun beforeHookedMethod(param: HookParam) {
                     param.result = false
                 }
             })
@@ -54,7 +55,7 @@ class AdBlockHook(private val lpparam: LoadPackageParam) {
         runCatching {
             val countdownView = cl.loadClass("com.spotify.adsinternal.playback.video.CountdownBarView")
             XposedHelpers.findAndHookMethod(countdownView, "onMeasure", Int::class.java, Int::class.java, object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
+                override fun beforeHookedMethod(param: HookParam) {
                     XposedHelpers.callMethod(param.thisObject, "setMeasuredDimension", 0, 0)
                     param.result = null
                 }

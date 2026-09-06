@@ -1,9 +1,10 @@
 package io.github.chsbuffer.revancedxposed.spotify.misc.logout
 
 import android.util.Log
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
+import io.github.chsbuffer.revancedxposed.HookParam
+import io.github.chsbuffer.revancedxposed.XC_MethodHook
+import io.github.chsbuffer.revancedxposed.XposedBridge
+import io.github.chsbuffer.revancedxposed.XposedHelpers
 import io.github.chsbuffer.revancedxposed.spotify.SpotifyHook
 import java.lang.reflect.Method
 
@@ -36,7 +37,7 @@ fun SpotifyHook.LogOutPatch() {
         } ?: return
 
         XposedBridge.hookMethod(proceedMethod, object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: MethodHookParam) {
+            override fun beforeHookedMethod(param: HookParam) {
                 try {
                     val req = param.args[0] ?: return
                     val url = findMethodSafe(req.javaClass, "url")?.invoke(req) ?: return
@@ -68,7 +69,7 @@ fun SpotifyHook.LogOutPatch() {
                 } catch (_: Exception) { /* Silent fail */ }
             }
 
-            override fun afterHookedMethod(param: MethodHookParam) {
+            override fun afterHookedMethod(param: HookParam) {
                 try {
                     val resp = param.result ?: return
                     val code = findMethodSafe(resp.javaClass, "code")?.invoke(resp) as? Int ?: return
@@ -120,7 +121,7 @@ fun SpotifyHook.LogOutPatch() {
 
         // Hook remove()
         XposedHelpers.findAndHookMethod(editorClass, "remove", String::class.java, object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: MethodHookParam) {
+            override fun beforeHookedMethod(param: HookParam) {
                 val key = param.args[0] as? String ?: return
                 if (protectedKeys.any { key.lowercase().contains(it) }) {
                     Log.i(TAG, "★ L3: Blocked removal of auth key: $key")
@@ -131,7 +132,7 @@ fun SpotifyHook.LogOutPatch() {
 
         // Hook clear()
         XposedHelpers.findAndHookMethod(editorClass, "clear", object : XC_MethodHook() {
-            override fun beforeHookedMethod(param: MethodHookParam) {
+            override fun beforeHookedMethod(param: HookParam) {
                 Log.w(TAG, "★ L3: Blocked SharedPreferences.clear() to preserve session")
                 param.result = param.thisObject
             }
