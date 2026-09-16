@@ -23,15 +23,41 @@ import io.github.chsbuffer.revancedxposed.PREF_ENABLE_MONET
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_PREMIUM
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_ROUND_UI
 import io.github.chsbuffer.revancedxposed.PREF_FILE
+import io.github.libxposed.service.XposedService
+import io.github.libxposed.service.XposedServiceHelper
 import java.io.File
 
-class SettingsActivity : Activity() {
+class SettingsActivity : Activity(), XposedServiceHelper.OnServiceListener {
+    private var xposedService: XposedService? = null
+
     private val prefs by lazy {
         getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
     }
 
+    override fun onServiceBind(service: XposedService) {
+        xposedService = service
+        runCatching {
+            val remotePrefs = service.getRemotePreferences(PREF_FILE)
+            // Ensure remote preferences are seeded with any local settings
+            val editor = remotePrefs.edit()
+            var changed = false
+            for ((k, v) in prefs.all) {
+                if (v is Boolean && !remotePrefs.contains(k)) {
+                    editor.putBoolean(k, v)
+                    changed = true
+                }
+            }
+            if (changed) editor.apply()
+        }
+    }
+
+    override fun onServiceDied(service: XposedService) {
+        xposedService = null
+    }
+
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
+        runCatching { XposedServiceHelper.registerListener(this) }
         setTheme(com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar)
         DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
@@ -144,6 +170,9 @@ class SettingsActivity : Activity() {
                         .start()
                 }.start()
                 prefs.edit(commit = true) { putBoolean(key, isChecked) }
+                runCatching {
+                    xposedService?.getRemotePreferences(PREF_FILE)?.edit()?.putBoolean(key, isChecked)?.apply()
+                }
                 makePrefsReadable()
             }
         }

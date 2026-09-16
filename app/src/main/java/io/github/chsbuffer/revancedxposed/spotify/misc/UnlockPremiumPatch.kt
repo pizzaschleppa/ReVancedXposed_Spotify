@@ -2,9 +2,10 @@ package io.github.chsbuffer.revancedxposed.spotify.misc
 
 import app.revanced.extension.shared.Logger
 import app.revanced.extension.spotify.misc.UnlockPremiumPatch
-import de.robv.android.xposed.XC_MethodHook
-import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers
+import io.github.chsbuffer.revancedxposed.HookParam
+import io.github.chsbuffer.revancedxposed.XC_MethodHook
+import io.github.chsbuffer.revancedxposed.XposedBridge
+import io.github.chsbuffer.revancedxposed.XposedHelpers
 import io.github.chsbuffer.revancedxposed.callMethod
 import io.github.chsbuffer.revancedxposed.findField
 import io.github.chsbuffer.revancedxposed.findFirstFieldByExactType
@@ -68,8 +69,8 @@ fun SpotifyHook.UnlockPremium() {
             classLoader,
             "build",
             object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: MethodHookParam) {
-                    param.thisObject.callMethod("shufflingContext", false)
+                override fun beforeHookedMethod(param: HookParam) {
+                    param.thisObject?.callMethod("shufflingContext", false)
                 }
             })
     }.onFailure { Logger.printDebug { "PlayerOptionOverrides hook failed: ${it.message}" } }
@@ -80,7 +81,7 @@ fun SpotifyHook.UnlockPremium() {
         XposedBridge.hookAllConstructors(contextMenuViewModelClazz, object : XC_MethodHook() {
             val isPremiumUpsell = runCatching { ::isPremiumUpsellField.field }.getOrNull()
 
-            override fun beforeHookedMethod(param: MethodHookParam) {
+            override fun beforeHookedMethod(param: HookParam) {
                 if (isPremiumUpsell == null) return
                 val parameterTypes = (param.method as Constructor<*>).parameterTypes
                 for (i in param.args.indices) {
@@ -129,10 +130,11 @@ fun SpotifyHook.UnlockPremium() {
         val justMethod = DexMethod("Lio/reactivex/rxjava3/core/Single;->just(Ljava/lang/Object;)Lio/reactivex/rxjava3/core/Single;").toMethod()
         val onErrorField = DexField("Lio/reactivex/rxjava3/internal/operators/single/SingleOnErrorReturn;->b:Lio/reactivex/rxjava3/functions/Function;").toField()
 
-        override fun afterHookedMethod(param: MethodHookParam) {
-            if (!param.result.javaClass.name.endsWith("SingleOnErrorReturn")) return
+        override fun afterHookedMethod(param: HookParam) {
+            val res = param.result ?: return
+            if (!res.javaClass.name.endsWith("SingleOnErrorReturn")) return
             runCatching {
-                val errorFunc = onErrorField.get(param.result)
+                val errorFunc = onErrorField.get(res)
                 val applyMethod = errorFunc.javaClass.getMethod("apply", java.lang.Object::class.java)
                 val fallbackValue = applyMethod.invoke(errorFunc, Exception("Pendragon block"))
                 param.result = justMethod.invoke(null, fallbackValue)

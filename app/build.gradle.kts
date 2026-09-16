@@ -62,6 +62,7 @@ android {
         }
     }
     packaging.resources {
+        merges.add("META-INF/xposed/*")
         excludes.addAll(
             arrayOf(
                 "META-INF/**", "**.bin"
@@ -112,7 +113,8 @@ dependencies {
     testImplementation(libs.junit.jupiter.params)
     testImplementation(libs.jadx.core)
     testImplementation(libs.slf4j.simple)
-    compileOnly(libs.xposed)
+    compileOnly(libs.libxposed)
+    implementation(libs.libxposed.service)
     compileOnly(project(":stub"))
 }
 
