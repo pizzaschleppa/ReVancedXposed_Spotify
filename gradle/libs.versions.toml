@@ -12,6 +12,8 @@ junit = "6.0.3"
 jadx = "1.5.5"
 slf4j = "2.0.17"
 material = "1.13.0"
+composeBom = "2024.12.01"
+activityCompose = "1.10.0"
 
 [libraries]
 dexkit = { group = "org.luckypray", name = "dexkit", version.ref = "dexkit" }
@@ -27,10 +29,16 @@ jadx-core = { group = "io.github.skylot", name = "jadx-core", version.ref = "jad
 slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 kotlinx-serialization-protobuf = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-protobuf", version = "1.11.0" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 jetbrains-kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+jetbrains-kotlin-plugin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 

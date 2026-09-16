@@ -1,23 +1,23 @@
 package io.github.chsbuffer.revancedxposed.spotify
 
-import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
-import android.view.Gravity
-import android.view.View
-import android.view.animation.OvershootInterpolator
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
-import androidx.core.graphics.toColorInt
-import com.google.android.material.color.DynamicColors
-import com.google.android.material.color.MaterialColors
-import com.google.android.material.materialswitch.MaterialSwitch
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_ADBLOCK
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_MONET
 import io.github.chsbuffer.revancedxposed.PREF_ENABLE_PREMIUM
@@ -27,7 +27,7 @@ import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
 import java.io.File
 
-class SettingsActivity : Activity(), XposedServiceHelper.OnServiceListener {
+class SettingsActivity : ComponentActivity(), XposedServiceHelper.OnServiceListener {
     private var xposedService: XposedService? = null
 
     private val prefs by lazy {
@@ -55,143 +55,149 @@ class SettingsActivity : Activity(), XposedServiceHelper.OnServiceListener {
         xposedService = null
     }
 
-    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
-        runCatching { XposedServiceHelper.registerListener(this) }
-        setTheme(com.google.android.material.R.style.Theme_Material3_DayNight_NoActionBar)
-        DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
-
-        val density = resources.displayMetrics.density
-        val colorSurface = themeColor(com.google.android.material.R.attr.colorSurface, "#121212".toColorInt())
-        val colorSurfaceContainer = themeColor(com.google.android.material.R.attr.colorSurfaceContainer, "#1D1B20".toColorInt())
-        val colorOnSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, Color.WHITE)
-        val colorOnSurfaceVariant = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, "#CAC4D0".toColorInt())
-    //    val colorPrimary = themeColor(com.google.android.material.R.attr.colorPrimary, "#1DB954".toColorInt())
-        val colorOnPrimary = themeColor(com.google.android.material.R.attr.colorOnPrimary, Color.BLACK)
-
-        window.statusBarColor = colorSurface
-        window.navigationBarColor = colorSurface
-
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(colorSurface)
-            setPadding(
-                (24 * density).toInt(),
-                (28 * density).toInt(),
-                (24 * density).toInt(),
-                (24 * density).toInt()
-            )
-        }
-
-        root.addView(TextView(this).apply {
-            text = "ReVanced Xposed FE Settings"
-            textSize = 22f
-            setTypeface(null, Typeface.BOLD)
-            setTextColor(colorOnSurface)
-            setPadding(0, 0, 0, (6 * density).toInt())
-        })
-
-        root.addView(TextView(this).apply {
-            text = "Changes apply after Spotify is restarted."
-            textSize = 13f
-            setTextColor(colorOnSurfaceVariant)
-            setPadding(0, 0, 0, (20 * density).toInt())
-        })
-
-        val settingsGroup = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(colorSurfaceContainer)
-                cornerRadius = 28 * density
-            }
-            setPadding((18 * density).toInt(), (6 * density).toInt(), (18 * density).toInt(), (6 * density).toInt())
-        }
-
-        settingsGroup.addView(createRow("Enable Premium", "Listen in any order, shuffle, or Smart Shuffle", PREF_ENABLE_PREMIUM))
-        settingsGroup.addView(createDivider(colorOnSurfaceVariant))
-        settingsGroup.addView(createRow("Enable AdBlock", "Block ads and other unwanted content", PREF_ENABLE_ADBLOCK))
-        settingsGroup.addView(createDivider(colorOnSurfaceVariant))
-        settingsGroup.addView(createRow("Enable Monet Theme by TheWinner02", "Dynamic colors based on the wallpaper", PREF_ENABLE_MONET, false))
-        settingsGroup.addView(createDivider(colorOnSurfaceVariant))
-        settingsGroup.addView(createRow("Enable RoundyUI by TheWinner02", "Rounded corners on cards and images", PREF_ENABLE_ROUND_UI, false))
-        root.addView(settingsGroup)
-
-        setContentView(ScrollView(this).apply {
-            setBackgroundColor(colorSurface)
-            addView(root)
-        })
+        runCatching { XposedServiceHelper.registerListener(this) }
 
         makePrefsReadable()
-    }
 
-    @SuppressLint("UseSwitchCompatOrMaterialCode")
-    private fun createRow(label: String, subtitle: String, key: String, defaultValue: Boolean = true): LinearLayout {
-        val density = resources.displayMetrics.density
-        val colorOnSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, Color.WHITE)
-        val colorOnSurfaceVariant = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, "#CAC4D0".toColorInt())
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            minimumHeight = (72 * density).toInt()
-            setPadding(0, (10 * density).toInt(), 0, (10 * density).toInt())
-            isClickable = true
-            val outValue = android.util.TypedValue()
-            theme.resolveAttribute(android.R.attr.selectableItemBackground, outValue, true)
-            setBackgroundResource(outValue.resourceId)
-        }
+        setContent {
+            val colorScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                dynamicDarkColorScheme(this)
+            } else {
+                darkColorScheme()
+            }
 
-        val textContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
-        }
-        textContainer.addView(TextView(this).apply {
-            text = label
-            setTextColor(colorOnSurface)
-            textSize = 16f
-            setTypeface(null, Typeface.BOLD)
-        })
-        textContainer.addView(TextView(this).apply {
-            text = subtitle
-            setTextColor(colorOnSurfaceVariant)
-            textSize = 12f
-        })
-        row.addView(textContainer)
-
-        val toggle = MaterialSwitch(this).apply {
-            isChecked = prefs.getBoolean(key, defaultValue)
-            setOnCheckedChangeListener { view, isChecked ->
-                view.animate().scaleX(0.95f).scaleY(0.95f).setDuration(100).withEndAction {
-                    view.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(150)
-                        .setInterpolator(OvershootInterpolator(2f))
-                        .start()
-                }.start()
-                prefs.edit(commit = true) { putBoolean(key, isChecked) }
-                runCatching {
-                    xposedService?.getRemotePreferences(PREF_FILE)?.edit()?.putBoolean(key, isChecked)?.apply()
+            MaterialTheme(colorScheme = colorScheme) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    SettingsScreen()
                 }
-                makePrefsReadable()
             }
         }
-        row.setOnClickListener { toggle.isChecked = !toggle.isChecked }
-        row.addView(toggle)
-        return row
     }
 
-    private fun createDivider(color: Int): View {
-        val density = resources.displayMetrics.density
-        return View(this).apply {
-            alpha = 0.24f
-            setBackgroundColor(color)
-            layoutParams = LinearLayout.LayoutParams(-1, (1 * density).toInt())
+    @Composable
+    fun SettingsScreen() {
+        val scrollState = rememberScrollState()
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(scrollState)
+        ) {
+            Text(
+                text = "ReVanced Xposed FE Settings",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+
+            Text(
+                text = "Changes apply after Spotify is restarted.",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 20.dp)
+            )
+
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(vertical = 8.dp)
+                ) {
+                    SettingsRow(
+                        title = "Enable Premium",
+                        subtitle = "Listen in any order, shuffle, or Smart Shuffle",
+                        prefKey = PREF_ENABLE_PREMIUM,
+                        defaultValue = true
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsRow(
+                        title = "Enable AdBlock",
+                        subtitle = "Block ads and other unwanted content",
+                        prefKey = PREF_ENABLE_ADBLOCK,
+                        defaultValue = true
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsRow(
+                        title = "Enable Monet Theme by TheWinner02",
+                        subtitle = "Dynamic colors based on the wallpaper",
+                        prefKey = PREF_ENABLE_MONET,
+                        defaultValue = false
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                    SettingsRow(
+                        title = "Enable RoundyUI by TheWinner02",
+                        subtitle = "Rounded corners on cards and images",
+                        prefKey = PREF_ENABLE_ROUND_UI,
+                        defaultValue = false
+                    )
+                }
+            }
         }
     }
 
-    private fun themeColor(attr: Int, fallback: Int): Int {
-        return MaterialColors.getColor(this, attr, fallback)
+    @Composable
+    fun SettingsRow(title: String, subtitle: String, prefKey: String, defaultValue: Boolean) {
+        var checked by remember { mutableStateOf(prefs.getBoolean(prefKey, defaultValue)) }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    checked = !checked
+                    savePref(prefKey, checked)
+                }
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = checked,
+                onCheckedChange = { isChecked ->
+                    checked = isChecked
+                    savePref(prefKey, isChecked)
+                }
+            )
+        }
+    }
+
+    private fun savePref(key: String, value: Boolean) {
+        prefs.edit(commit = true) { putBoolean(key, value) }
+        runCatching {
+            xposedService?.getRemotePreferences(PREF_FILE)?.edit()?.putBoolean(key, value)?.apply()
+        }
+        makePrefsReadable()
     }
 
     private fun makePrefsReadable() {

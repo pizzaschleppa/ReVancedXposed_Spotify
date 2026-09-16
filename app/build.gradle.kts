@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     //alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
+    alias(libs.plugins.jetbrains.kotlin.plugin.compose)
 }
 
 val gitCommitHashProvider = providers.exec {
@@ -69,7 +70,10 @@ android {
             )
         )
     }
-    buildFeatures.buildConfig = true
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -109,6 +113,14 @@ dependencies {
     implementation(libs.annotation)
     implementation(libs.kotlinx.serialization.protobuf)
     implementation(libs.material)
+    
+    val composeBom = platform(libs.compose.bom)
+    implementation(composeBom)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    
     testImplementation(kotlin("test-junit5"))
     testImplementation(libs.junit.jupiter.params)
     testImplementation(libs.jadx.core)
