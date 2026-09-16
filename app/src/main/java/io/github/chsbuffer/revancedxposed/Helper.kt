@@ -27,11 +27,6 @@ class HookParam(
 
     var throwable: Throwable? = null
 
-    fun setResult(result: Any?) {
-        this.result = result
-        this.isSkipped = true
-    }
-
     fun invokeOriginalMethod(args: Array<Any?> = this.args): Any? {
         val methodObj = method as? Method ?: throw IllegalStateException("Executable is not a Method: $method")
         val invoker = MainHook.module.getInvoker(methodObj).setType(XposedInterface.Invoker.Type.ORIGIN)
