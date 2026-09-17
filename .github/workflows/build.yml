@@ -1,0 +1,46 @@
+name: Android Test Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to build"
+        required: true
+        default: "api-compat"
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
+          submodules: true
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Get random number
+        id: random
+        run: echo "NUMBER=$(shuf -i 1-10000 -n 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Build Release APK
+        run: ./gradlew assembleUniversalRelease -PPACKAGE_NAME_SEED=${{ steps.random.outputs.NUMBER }}
+
+      - name: Upload Test APK
+        uses: actions/upload-artifact@v5
+        with:
+          name: rvxp-test-${{ inputs.branch }}
+          path: |
+            app/build/outputs/apk/universal/release/*.apk
+            app/build/outputs/mapping/universalRelease/mapping.txt
