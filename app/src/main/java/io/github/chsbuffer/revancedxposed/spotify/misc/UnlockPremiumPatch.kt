@@ -21,46 +21,52 @@ fun SpotifyHook.UnlockPremium() {
     // --- 1. ATTRIBUTE UNLOCK (CORE PREMIUM) ---
     // Use 'after' to intercept the result.
     // Important: create a copy, do not modify the original object.
-    ::productStateProtoFingerprint.hookMethod {
-        after { param ->
-            val result = param.result as? Map<String, *> ?: return@after
-            // Use the standard method you probably already have.
-            UnlockPremiumPatch.overrideAttributes(result)
-            // To be extra safe, there is no need to reassign param.result
-            // because the map was modified internally.
+    runCatching {
+        ::productStateProtoFingerprint.hookMethod {
+            after { param ->
+                val result = param.result as? Map<String, *> ?: return@after
+                // Use the standard method you probably already have.
+                UnlockPremiumPatch.overrideAttributes(result)
+                // To be extra safe, there is no need to reassign param.result
+                // because the map was modified internally.
+            }
         }
-    }
+    }.onFailure { Logger.printDebug { "ProductStateProto hook failed: ${it.message}" } }
 
     // --- 2. POPULAR TRACKS (ARTIST PAGE) ---
-    ::buildQueryParametersFingerprint.hookMethod {
-        after { param ->
-            val result = param.result ?: return@after
-            val fieldName = "checkDeviceCapability"
-            if (result.toString().contains("$fieldName=")) {
-                param.result = XposedBridge.invokeOriginalMethod(
-                    param.method, param.thisObject, arrayOf(param.args[0], true)
-                )
+    runCatching {
+        ::buildQueryParametersFingerprint.hookMethod {
+            after { param ->
+                val result = param.result ?: return@after
+                val fieldName = "checkDeviceCapability"
+                if (result.toString().contains("$fieldName=")) {
+                    param.result = XposedBridge.invokeOriginalMethod(
+                        param.method, param.thisObject, arrayOf(param.args[0], true)
+                    )
+                }
             }
         }
-    }
+    }.onFailure { Logger.printDebug { "buildQueryParameters hook failed: ${it.message}" } }
 
     // --- 3. GOOGLE ASSISTANT (FIX URIs) ---
-    ::contextFromJsonFingerprint.hookMethod {
-        fun safeRemoveStation(field: Field?, obj: Any?) {
-            if (field == null || obj == null) return
-            runCatching {
-                val value = field.get(obj) as? String ?: return
-                field.set(obj, UnlockPremiumPatch.removeStationString(value))
+    runCatching {
+        ::contextFromJsonFingerprint.hookMethod {
+            fun safeRemoveStation(field: Field?, obj: Any?) {
+                if (field == null || obj == null) return
+                runCatching {
+                    val value = field.get(obj) as? String ?: return
+                    field.set(obj, UnlockPremiumPatch.removeStationString(value))
+                }
+            }
+
+            after { param ->
+                val result = param.result ?: return@after
+                val clazz = result.javaClass
+                safeRemoveStation(clazz.findField("uri"), result)
+                safeRemoveStation(clazz.findField("url"), result)
             }
         }
-
-        after { param ->
-            val result = param.result ?: return@after
-            val clazz = result.javaClass
-            safeRemoveStation(clazz.findField("uri"), result)
-            safeRemoveStation(clazz.findField("url"), result)
-        }
-    }
+    }.onFailure { Logger.printDebug { "contextFromJson hook failed: ${it.message}" } }
 
     // --- 4. ANTI-SHUFFLE (GOOGLE ASSISTANT) ---
     runCatching {
@@ -101,28 +107,32 @@ fun SpotifyHook.UnlockPremium() {
 
     // --- 6. REMOVE AD SECTIONS (HOME & BROWSE) ---
     // For Home.
-    ::homeStructureGetSectionsFingerprint.hookMethod {
-        after { param ->
-            val sections = param.result as? MutableList<*> ?: return@after
-            runCatching {
-                // Force the list to be mutable (avoids immutable-list errors).
-                sections.javaClass.findFirstFieldByExactType(Boolean::class.java).set(sections, true)
-                UnlockPremiumPatch.removeHomeSections(sections)
+    runCatching {
+        ::homeStructureGetSectionsFingerprint.hookMethod {
+            after { param ->
+                val sections = param.result as? MutableList<*> ?: return@after
+                runCatching {
+                    // Force the list to be mutable (avoids immutable-list errors).
+                    sections.javaClass.findFirstFieldByExactType(Boolean::class.java).set(sections, true)
+                    UnlockPremiumPatch.removeHomeSections(sections)
+                }
             }
         }
-    }
+    }.onFailure { Logger.printDebug { "homeStructure hook failed: ${it.message}" } }
 
     // For Browse.
-    ::browseStructureGetSectionsFingerprint.hookMethod {
-        after { param ->
-            val sections = param.result as? MutableList<*> ?: return@after
-            runCatching {
-                // Force the list to be mutable.
-                sections.javaClass.findFirstFieldByExactType(Boolean::class.java).set(sections, true)
-                UnlockPremiumPatch.removeBrowseSections(sections)
+    runCatching {
+        ::browseStructureGetSectionsFingerprint.hookMethod {
+            after { param ->
+                val sections = param.result as? MutableList<*> ?: return@after
+                runCatching {
+                    // Force the list to be mutable.
+                    sections.javaClass.findFirstFieldByExactType(Boolean::class.java).set(sections, true)
+                    UnlockPremiumPatch.removeBrowseSections(sections)
+                }
             }
         }
-    }
+    }.onFailure { Logger.printDebug { "browseStructure hook failed: ${it.message}" } }
 
     // --- 7. BLOCK AD POPUPS (PENDRAGON) ---
     // Simulate a natural network error instead of blocking the call.

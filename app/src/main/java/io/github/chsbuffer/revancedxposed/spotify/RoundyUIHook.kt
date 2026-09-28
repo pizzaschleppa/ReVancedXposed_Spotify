@@ -93,33 +93,35 @@ class RoundyUIHook(private val lpparam: LoadPackageParam) {
         )
 
         // 4. BottomSheet hook (the container that slides up from the bottom).
-        XposedHelpers.findAndHookMethod(
-            "com.google.android.material.bottomsheet.BottomSheetBehavior",
-            classLoader,
-            "onLayoutChild",
-            "androidx.coordinatorlayout.widget.CoordinatorLayout",
-            View::class.java,
-            Int::class.javaPrimitiveType,
-            object : XC_MethodHook() {
-                override fun afterHookedMethod(param: HookParam) {
-                    val view = param.args[1] as View
-
-                    // Apply rounding only to the TOP corners (top left and top right).
-                    // This is typical for Material 3 BottomSheets.
-                    view.clipToOutline = true
-                    view.outlineProvider = object : ViewOutlineProvider() {
-                        override fun getOutline(view: View, outline: Outline) {
-                            // Create a rectangle that extends below the view so the bottom corners stay square.
-                            outline.setRoundRect(
-                                0, 0,
-                                view.width, view.height + radiusLarge.toInt(),
-                                radiusLarge
-                            )
+        runCatching {
+            val bottomSheetBehavior = XposedHelpers.findClass(
+                "com.google.android.material.bottomsheet.BottomSheetBehavior",
+                classLoader
+            )
+            io.github.chsbuffer.revancedxposed.XposedBridge.hookAllMethods(
+                bottomSheetBehavior,
+                "onLayoutChild",
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: HookParam) {
+                        val view = param.args.firstOrNull { it is View } as? View ?: return
+    
+                        // Apply rounding only to the TOP corners (top left and top right).
+                        // This is typical for Material 3 BottomSheets.
+                        view.clipToOutline = true
+                        view.outlineProvider = object : ViewOutlineProvider() {
+                            override fun getOutline(view: View, outline: Outline) {
+                                // Create a rectangle that extends below the view so the bottom corners stay square.
+                                outline.setRoundRect(
+                                    0, 0,
+                                    view.width, view.height + radiusLarge.toInt(),
+                                    radiusLarge
+                                )
+                            }
                         }
                     }
                 }
-            }
-        )
+            )
+        }.onFailure { io.github.chsbuffer.revancedxposed.XposedBridge.log("RoundyUIHook: BottomSheet hook failed: ${it.message}") }
 
 // 5. Backup hook for BottomSheet backgrounds.
 // Many apps use MaterialShapeDrawable to handle panel corners.

@@ -70,11 +70,28 @@ public final class UnlockPremiumPatch {
     /**
      * A list of home sections feature types ids which should be removed. These ids match the ones from the protobuf
      * response which delivers home sections.
+     * 9.1.84+: Home API moved from {@code homeapi.proto} to {@code casita.v1.resolved};
+     * resolved reflectively so a missing class can't break class loading.
      */
-    private static final List<Integer> REMOVED_HOME_SECTIONS = List.of(
-            com.spotify.home.evopage.homeapi.proto.Section.VIDEO_BRAND_AD_FIELD_NUMBER,
-            com.spotify.home.evopage.homeapi.proto.Section.IMAGE_BRAND_AD_FIELD_NUMBER
-    );
+    private static final List<Integer> REMOVED_HOME_SECTIONS = resolveHomeAdSections();
+
+    private static List<Integer> resolveHomeAdSections() {
+        String[] candidates = {
+                "com.spotify.casita.v1.resolved.Section",
+                "com.spotify.home.evopage.homeapi.proto.Section"
+        };
+        for (String cls : candidates) {
+            try {
+                Class<?> c = Class.forName(cls);
+                int video = c.getField("VIDEO_BRAND_AD_FIELD_NUMBER").getInt(null);
+                int image = c.getField("IMAGE_BRAND_AD_FIELD_NUMBER").getInt(null);
+                return List.of(video, image);
+            } catch (Exception ignored) {
+            }
+        }
+        Logger.printException(() -> "resolveHomeAdSections: no Section class found, home ad filter disabled");
+        return List.of();
+    }
 
     /**
      * A list of browse sections feature types ids which should be removed. These ids match the ones from the protobuf

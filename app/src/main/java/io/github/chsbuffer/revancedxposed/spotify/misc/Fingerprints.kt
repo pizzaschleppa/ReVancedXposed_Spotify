@@ -20,11 +20,20 @@ val attributesMapField =
     findFieldDirect { productStateProtoFingerprint().usingFields.single().field }
 
 val buildQueryParametersFingerprint = findMethodDirect {
-    findMethod {
-        matcher {
-            strings("trackRows", "device_type:tablet")
-        }
-    }.single()
+    runCatching {
+        findMethod {
+            matcher {
+                strings("trackRows", "device_type:tablet")
+            }
+        }.single()
+    }.getOrElse {
+        // 9.1.84+: "device_type:tablet" string may have been removed.
+        findMethod {
+            matcher {
+                strings("trackRows", "checkDeviceCapability")
+            }
+        }.single()
+    }
 }
 val contextFromJsonFingerprint = fingerprint {
     opcodes(
@@ -79,7 +88,8 @@ fun structureGetSectionsFingerprint(className: String) = fingerprint {
 }
 
 val homeStructureGetSectionsFingerprint =
-    structureGetSectionsFingerprint("homeapi.proto.HomeStructure")
+    runCatching { structureGetSectionsFingerprint("casita.v1.resolved.HomeStructure") }
+        .getOrElse { structureGetSectionsFingerprint("homeapi.proto.HomeStructure") }
 val browseStructureGetSectionsFingerprint =
     structureGetSectionsFingerprint("browsita.v1.resolved.BrowseStructure")
 
