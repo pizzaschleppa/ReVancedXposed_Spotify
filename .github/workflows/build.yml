@@ -38,7 +38,7 @@ jobs:
         run: ./gradlew assembleUniversalRelease -PPACKAGE_NAME_SEED=${{ steps.random.outputs.NUMBER }}
 
       - name: Upload Test APK
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: rvxp-test-${{ inputs.branch }}
           path: |
