@@ -3,6 +3,8 @@ package io.github.chsbuffer.revancedxposed
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import app.revanced.extension.shared.Utils
+import io.github.chsbuffer.revancedxposed.spotify.SpotifyHook
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
@@ -68,47 +70,19 @@ class MainHook : XposedModule() {
         }
     }
 
-    private val NHB_BLOCKED_SEGMENTS = listOf(
-        "/ad-logic/",
-        "/ads/v2/",
-        "/v1/ads/",
-        "/gabo-receiver-service/",
-    )
-
     private fun onApplicationAttached(app: Application, lpparam: PackageParam) {
         if (initialized) return
         initialized = true
 
-        log(TAG, "NHB ad-blocker only mode — no DexKit, no classloader injection")
+        Utils.setContext(app)
+        log(TAG, "DIAGNOSTIC MODE — full module (UnlockPremium + NHB), checking if ProductState is reachable")
 
-        // --- NHB AD BLOCKER (direct, no BaseHook/DexKit) ---
+        // --- SPOTIFY PATCHES (UnlockPremium logs 'overrideAttributes called, map size=N') ---
         try {
-            val cl = lpparam.classLoader
-            val httpConn = cl.loadClass("com.spotify.core.http.NativeHttpConnection")
-            val httpReq = cl.loadClass("com.spotify.core.http.HttpRequest")
-            val urlField = httpReq.getDeclaredField("url")
-            urlField.isAccessible = true
-
-            // Log send() return type for debugging
-            val sendMethods = httpConn.declaredMethods.filter { it.name == "send" }
-            for (m in sendMethods) {
-                log(TAG, "NHB: send() signature: ${m.returnType.name} send(${m.parameterTypes.joinToString { it.name }})")
-            }
-
-            XposedBridge.hookAllMethods(httpConn, "send", object : XC_MethodHook() {
-                override fun beforeHookedMethod(param: HookParam) {
-                    val req = param.args[0]
-                    val url = urlField.get(req) as? String ?: return
-
-                    if (NHB_BLOCKED_SEGMENTS.any { url.contains(it, true) }) {
-                        log(TAG, "NHB BLOCKED: $url")
-                        param.result = null
-                    }
-                }
-            })
-            log(TAG, "NHB: ad-blocker hook INSTALLED")
+            SpotifyHook(app, lpparam).Hook()
+            log(TAG, "SpotifyHook applied")
         } catch (e: Exception) {
-            log(TAG, "NHB failed: ${e.message}", e)
+            log(TAG, "SpotifyHook failed: ${e.message}", e)
         }
     }
 
