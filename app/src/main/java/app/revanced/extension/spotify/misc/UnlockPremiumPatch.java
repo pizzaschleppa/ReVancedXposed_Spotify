@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import android.util.Log;
 import app.revanced.extension.shared.Logger;
 import io.github.chsbuffer.revancedxposed.XposedHelpers;
 
@@ -39,10 +38,34 @@ public final class UnlockPremiumPatch {
     }
 
     private static final List<OverrideAttribute> PREMIUM_OVERRIDES = List.of(
+            // Disable advertisements
             new OverrideAttribute("ads", FALSE),
-            new OverrideAttribute("catalogue", "premium", false),
-            new OverrideAttribute("type", "premium", false),
-            new OverrideAttribute("nft-disabled", "1", false)
+            // Works along on-demand, allows playing any song without restriction.
+            new OverrideAttribute("player-license", "premium"),
+            // Secondary license flag
+            new OverrideAttribute("player-license-v2", "premium"),
+            // Disables shuffle being initially enabled when first playing a playlist.
+            new OverrideAttribute("shuffle", FALSE),
+            // Allows playing any song on-demand, without a shuffled order.
+            new OverrideAttribute("on-demand", TRUE),
+            // Make sure playing songs is not disabled remotely and playlists show up.
+            new OverrideAttribute("streaming", TRUE),
+            // Allows adding songs to queue and removes the smart shuffle mode restriction,
+            // allowing to pick any of the other modes. Flag is not present in legacy app target.
+            new OverrideAttribute("pick-and-shuffle", FALSE),
+            // Disables shuffle-mode streaming-rule, which forces songs to be played shuffled
+            // and breaks the player when other patches are applied.
+            new OverrideAttribute("streaming-rules", ""),
+            // Enables premium UI in settings and removes the premium button in the nav-bar.
+            new OverrideAttribute("nft-disabled", "1"),
+            // Product type flag
+            new OverrideAttribute("type", "premium"),
+            // Enable Spotify Car Thing hardware device.
+            // Device is discontinued and no longer works with the latest releases,
+            // but it might still work with older app targets.
+            new OverrideAttribute("can_use_superbird", TRUE, false),
+            // Removes the premium button in the nav-bar for tablet users.
+            new OverrideAttribute("tablet-free", FALSE, false)
     );
 
     /**
@@ -66,48 +89,32 @@ public final class UnlockPremiumPatch {
      * Injection point. Override account attributes.
      */
     public static void overrideAttributes(Map<String, ?> attributes) {
-        Log.i("ReVancedXposed", "overrideAttributes called, map size=" + attributes.size());
         try {
             for (OverrideAttribute override : PREMIUM_OVERRIDES) {
                 var attribute = attributes.get(override.key);
 
                 if (attribute == null) {
                     if (override.isExpected) {
-                        Log.w("ReVancedXposed", "Attribute " + override.key + " expected but NOT FOUND");
+                        Logger.printException(() -> "Attribute " + override.key + " expected but not found");
                     }
                     continue;
                 }
 
                 Object overrideValue = override.overrideValue;
                 Object originalValue;
-                try {
-                    originalValue = XposedHelpers.getObjectField(attribute, "value_");
-                } catch (Exception ex) {
-                    Log.e("ReVancedXposed", "Failed to get value_ from attribute " + override.key +
-                            " (class=" + attribute.getClass().getName() + "): " + ex.getMessage());
-                    continue;
-                }
+                originalValue = XposedHelpers.getObjectField(attribute, "value_");
 
                 if (overrideValue.equals(originalValue)) {
                     continue;
                 }
 
-                Log.i("ReVancedXposed", "Overriding " + override.key + ": " + originalValue + " -> " + overrideValue);
+                Logger.printInfo(() -> "Overriding account attribute " + override.key +
+                        " from " + originalValue + " to " + overrideValue);
+
                 XposedHelpers.setObjectField(attribute, "value_", overrideValue);
-                // Fix valueCase_ to match the new type (2=bool, 3=long, 4=string)
-                int valueCase;
-                if (overrideValue instanceof Boolean) {
-                    valueCase = 2;
-                } else if (overrideValue instanceof Long) {
-                    valueCase = 3;
-                } else {
-                    valueCase = 4; // String
-                }
-                XposedHelpers.setIntField(attribute, "valueCase_", valueCase);
             }
-            Log.i("ReVancedXposed", "overrideAttributes complete");
         } catch (Exception ex) {
-            Log.e("ReVancedXposed", "overrideAttributes failure: " + ex.getMessage(), ex);
+            Logger.printException(() -> "overrideAttributes failure", ex);
         }
     }
 

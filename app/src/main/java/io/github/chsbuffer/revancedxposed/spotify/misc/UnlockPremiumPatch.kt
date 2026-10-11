@@ -23,54 +23,17 @@ import java.lang.reflect.Field
 @Suppress("UNCHECKED_CAST")
 fun SpotifyHook.UnlockPremium() {
 
-    XposedBridge.log("UnlockPremium: starting hook setup")
+    Logger.printInfo { "${ModInfo.TAG} UnlockPremium loaded — Patched by ${ModInfo.AUTHOR} (ds: ${ModInfo.DISCORD})" }
 
-    // --- 1a. ATTRIBUTE UNLOCK via getter (legacy path) ---
+    // --- 1. ATTRIBUTE UNLOCK (CORE PREMIUM) ---
     runCatching {
         ::productStateProtoFingerprint.hookMethod {
             after { param ->
                 val result = param.result as? Map<String, *> ?: return@after
-                XposedBridge.log("UnlockPremium: productStateProto.n() FIRED, size=${result.size}")
                 UnlockPremiumPatch.overrideAttributes(result)
             }
         }
-        XposedBridge.log("UnlockPremium: productStateProto getter hook INSTALLED")
-    }.onFailure { XposedBridge.log("UnlockPremium: productStateProto getter hook FAILED: ${it.message}") }
-
-    // --- 1b. ATTRIBUTE UNLOCK via parser q(byte[]) (9.1.90+: getter is never called) ---
-    runCatching {
-        val protoClass = classLoader.loadClass("com.spotify.remoteconfig.internal.ProductStateProto")
-        val parseMethod = protoClass.getDeclaredMethod("q", ByteArray::class.java)
-        XposedBridge.hookMethod(parseMethod, object : XC_MethodHook() {
-            override fun afterHookedMethod(param: HookParam) {
-                val proto = param.result ?: return
-                val valuesField = proto.javaClass.getDeclaredField("values_")
-                valuesField.isAccessible = true
-                val values = valuesField.get(proto) as? Map<String, *> ?: return
-                XposedBridge.log("UnlockPremium: q(byte[]) FIRED, values size=${values.size}, keys=${values.keys.take(5)}")
-                UnlockPremiumPatch.overrideAttributes(values)
-            }
-        })
-        XposedBridge.log("UnlockPremium: productStateProto parser hook INSTALLED on $parseMethod")
-    }.onFailure { XposedBridge.log("UnlockPremium: productStateProto parser hook FAILED: ${it.message}") }
-
-    // --- 1c. ATTRIBUTE UNLOCK via k9k1.q(LinkedHashMap) (UCS builder path — the ACTUAL data flow in 9.1.90) ---
-    runCatching {
-        val k9k1Class = classLoader.loadClass("p.k9k1")
-        val buildMethod = k9k1Class.getDeclaredMethod("q", java.util.LinkedHashMap::class.java)
-        XposedBridge.hookMethod(buildMethod, object : XC_MethodHook() {
-            override fun afterHookedMethod(param: HookParam) {
-                val czp0 = param.result ?: return
-                val proto = XposedHelpers.getObjectField(czp0, "b") ?: return
-                val valuesField = proto.javaClass.getDeclaredField("values_")
-                valuesField.isAccessible = true
-                val values = valuesField.get(proto) as? Map<String, *> ?: return
-                XposedBridge.log("UnlockPremium: k9k1.q(LinkedHashMap) FIRED, values size=${values.size}, keys=${values.keys.take(10)}")
-                UnlockPremiumPatch.overrideAttributes(values)
-            }
-        })
-        XposedBridge.log("UnlockPremium: k9k1.q(LinkedHashMap) hook INSTALLED on $buildMethod")
-    }.onFailure { XposedBridge.log("UnlockPremium: k9k1.q(LinkedHashMap) hook FAILED: ${it.message}") }
+    }.onFailure { Logger.printInfo { "productStateProto hook failed: ${it.message}" } }
 
     // --- 2. POPULAR TRACKS (ARTIST PAGE) ---
     runCatching {
@@ -85,7 +48,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         }
-    }.onFailure { XposedBridge.log("UnlockPremium: buildQueryParameters hook FAILED: ${it.message}") }
+    }.onFailure { Logger.printInfo { "buildQueryParameters hook failed: ${it.message}" } }
 
     // --- 3. GOOGLE ASSISTANT (FIX URIs) ---
     runCatching {
@@ -105,7 +68,7 @@ fun SpotifyHook.UnlockPremium() {
                 safeRemoveStation(clazz.findField("url"), result)
             }
         }
-    }.onFailure { XposedBridge.log("UnlockPremium: contextFromJson hook FAILED: ${it.message}") }
+    }.onFailure { Logger.printInfo { "contextFromJson hook failed: ${it.message}" } }
 
     // --- 4. ANTI-SHUFFLE (GOOGLE ASSISTANT) ---
     runCatching {
@@ -118,7 +81,7 @@ fun SpotifyHook.UnlockPremium() {
                     param.thisObject?.callMethod("shufflingContext", false)
                 }
             })
-    }.onFailure { XposedBridge.log("UnlockPremium: PlayerOptionOverrides hook FAILED: ${it.message}") }
+    }.onFailure { Logger.printDebug { "PlayerOptionOverrides hook failed: ${it.message}" } }
 
     // --- 5. CONTEXT MENU CLEANUP (REMOVE ADS) ---
     runCatching {
@@ -142,7 +105,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         })
-    }.onFailure { XposedBridge.log("UnlockPremium: ContextMenu hook FAILED: ${it.message}") }
+    }.onFailure { Logger.printDebug { "ContextMenu hook failed: ${it.message}" } }
 
     // --- 6. REMOVE AD SECTIONS (HOME & BROWSE) ---
     runCatching {
@@ -155,7 +118,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         }
-    }.onFailure { XposedBridge.log("UnlockPremium: homeStructure hook FAILED: ${it.message}") }
+    }.onFailure { Logger.printInfo { "homeStructure hook failed: ${it.message}" } }
 
     runCatching {
         ::browseStructureGetSectionsFingerprint.hookMethod {
@@ -167,7 +130,7 @@ fun SpotifyHook.UnlockPremium() {
                 }
             }
         }
-    }.onFailure { XposedBridge.log("UnlockPremium: browseStructure hook FAILED: ${it.message}") }
+    }.onFailure { Logger.printInfo { "browseStructure hook failed: ${it.message}" } }
 
     // --- 7. BLOCK AD POPUPS (PENDRAGON) ---
     runCatching {
@@ -189,5 +152,5 @@ fun SpotifyHook.UnlockPremium() {
 
         ::pendragonJsonFetchMessageRequestFingerprint.hookMethod(replaceWithRxError)
         ::pendragonJsonFetchMessageListRequestFingerprint.hookMethod(replaceWithRxError)
-    }.onFailure { XposedBridge.log("UnlockPremium: pendragon hook FAILED: ${it.message}") }
+    }.onFailure { Logger.printInfo { "pendragon hook failed: ${it.message}" } }
 }

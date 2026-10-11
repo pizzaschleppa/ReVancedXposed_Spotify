@@ -2,9 +2,13 @@ package io.github.chsbuffer.revancedxposed
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import app.revanced.extension.shared.Utils
+import io.github.chsbuffer.revancedxposed.spotify.AdBlockHook
+import io.github.chsbuffer.revancedxposed.spotify.RoundyUIHook
 import io.github.chsbuffer.revancedxposed.spotify.SpotifyHook
+import io.github.chsbuffer.revancedxposed.spotify.ThemeHook
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
@@ -75,17 +79,71 @@ class MainHook : XposedModule() {
         initialized = true
 
         Utils.setContext(app)
-        log(TAG, "DIAGNOSTIC MODE — full module (UnlockPremium + NHB), checking if ProductState is reachable")
 
-        // --- SPOTIFY PATCHES (UnlockPremium logs 'overrideAttributes called, map size=N') ---
+        val prefs = getModulePrefs(app)
+
+        if (isReVancedPatched(lpparam)) {
+            Utils.showToastLong("ReVanced Xposed FE module does not work with patched app")
+            return
+        }
+        Utils.showToastLong("ReVanced Xposed FE is initializing, please wait...")
+
+        // --- SPOTIFY PATCHES ---
         try {
-            SpotifyHook(app, lpparam).Hook()
-            log(TAG, "SpotifyHook applied")
+            SpotifyHook(app, lpparam, prefs.getBoolean(PREF_ENABLE_PREMIUM, true)).Hook()
         } catch (e: Exception) {
-            log(TAG, "SpotifyHook failed: ${e.message}", e)
+            log(TAG, "Spotify patches failed: ${e.message}", e)
+        }
+
+        // --- AD BLOCK ---
+        try {
+            if (prefs.getBoolean(PREF_ENABLE_ADBLOCK, true)) {
+                AdBlockHook(lpparam).hook()
+                log(TAG, "AdBlocker: Module activated")
+            }
+        } catch (e: Exception) {
+            log(TAG, "AdBlocker failed: ${e.message}", e)
+        }
+
+        // --- MONET BLOCK ---
+        try {
+            if (prefs.getBoolean(PREF_ENABLE_MONET, false)) {
+                ThemeHook(app, lpparam).hook()
+            }
+        } catch (e: Exception) {
+            log(TAG, "Monet Mod failed: ${e.message}", e)
+        }
+
+        // --- ROUNDY BLOCK ---
+        try {
+            if (prefs.getBoolean(PREF_ENABLE_ROUND_UI, false)) {
+                RoundyUIHook(lpparam).hook()
+            }
+        } catch (e: Exception) {
+            log(TAG, "Roundy Mod failed: ${e.message}", e)
         }
     }
 
+    private fun isReVancedPatched(lpparam: PackageParam): Boolean {
+        return runCatching {
+            lpparam.classLoader.loadClass("app.revanced.extension.shared.Utils")
+        }.isSuccess || runCatching {
+            lpparam.classLoader.loadClass("app.revanced.extension.shared.utils.Utils")
+        }.isSuccess || runCatching {
+            lpparam.classLoader.loadClass("app.revanced.integrations.shared.Utils")
+        }.isSuccess || runCatching {
+            lpparam.classLoader.loadClass("app.revanced.integrations.shared.utils.Utils")
+        }.isSuccess
+    }
+
+    private fun getModulePrefs(app: Application): SharedPreferences {
+        return try {
+            getRemotePreferences(PREF_FILE)
+        } catch (t: Throwable) {
+            log(TAG, "Failed to get remote preferences: ${t.message}", t)
+            app.getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
+        }
+    }
 }
 
 const val PREF_FILE = "spotify_prefs"
