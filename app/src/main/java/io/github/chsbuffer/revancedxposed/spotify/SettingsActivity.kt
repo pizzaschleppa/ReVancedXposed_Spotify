@@ -1,6 +1,6 @@
 package io.github.chsbuffer.revancedxposed.spotify
 
-import android.content.Context
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,7 +14,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
@@ -31,7 +33,7 @@ class SettingsActivity : ComponentActivity(), XposedServiceHelper.OnServiceListe
     private var xposedService: XposedService? = null
 
     private val prefs by lazy {
-        getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE)
+        getSharedPreferences(PREF_FILE, MODE_PRIVATE)
     }
 
     override fun onServiceBind(service: XposedService) {
@@ -79,6 +81,7 @@ class SettingsActivity : ComponentActivity(), XposedServiceHelper.OnServiceListe
         }
     }
 
+    @Preview
     @Composable
     fun SettingsScreen() {
         val scrollState = rememberScrollState()
@@ -155,14 +158,17 @@ class SettingsActivity : ComponentActivity(), XposedServiceHelper.OnServiceListe
 
     @Composable
     fun SettingsRow(title: String, subtitle: String, prefKey: String, defaultValue: Boolean) {
-        var checked by remember { mutableStateOf(prefs.getBoolean(prefKey, defaultValue)) }
+        val isPreview = LocalInspectionMode.current
+        var checked by remember {
+            mutableStateOf(if (isPreview) defaultValue else prefs.getBoolean(prefKey, defaultValue))
+        }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
                     checked = !checked
-                    savePref(prefKey, checked)
+                    if (!isPreview) savePref(prefKey, checked)
                 }
                 .padding(horizontal = 24.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -186,7 +192,7 @@ class SettingsActivity : ComponentActivity(), XposedServiceHelper.OnServiceListe
                 checked = checked,
                 onCheckedChange = { isChecked ->
                     checked = isChecked
-                    savePref(prefKey, isChecked)
+                    if (!isPreview) savePref(prefKey, isChecked)
                 }
             )
         }
@@ -195,15 +201,17 @@ class SettingsActivity : ComponentActivity(), XposedServiceHelper.OnServiceListe
     private fun savePref(key: String, value: Boolean) {
         prefs.edit(commit = true) { putBoolean(key, value) }
         runCatching {
-            xposedService?.getRemotePreferences(PREF_FILE)?.edit()?.putBoolean(key, value)?.apply()
+            xposedService?.getRemotePreferences(PREF_FILE)?.edit { putBoolean(key, value) }
         }
         makePrefsReadable()
     }
 
+    @SuppressLint("SetWorldReadable")
     private fun makePrefsReadable() {
         runCatching {
             val prefsFile = File(applicationInfo.dataDir, "shared_prefs/$PREF_FILE.xml")
             if (prefsFile.exists()) {
+                @Suppress("SetWorldReadable")
                 prefsFile.setReadable(true, false)
             }
         }
