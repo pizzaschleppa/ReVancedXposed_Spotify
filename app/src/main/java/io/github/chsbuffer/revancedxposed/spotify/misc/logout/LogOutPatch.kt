@@ -10,9 +10,17 @@ import java.lang.reflect.Method
 
 private const val TAG = "LogOutPatch"
 
+private val BLOCKED_SPCLIENT_PATHS = listOf(
+    "dual-sync",
+    "social-connect",
+    "melody/v1/check",
+    "reachability/check",
+)
+
 private object AuthCache {
     @Volatile var body: String? = null
     @Volatile var contentType: Any? = null
+    @Volatile var cachedAt: Long = 0L
 }
 
 fun SpotifyHook.LogOutPatch() {
@@ -45,9 +53,7 @@ fun SpotifyHook.LogOutPatch() {
                     val path = findMethodSafe(url.javaClass, "encodedPath")?.invoke(url) as? String ?: ""
 
                     // LAYER 2: Block detection/sync paths (spclient)
-                    val isDetection = path.contains("dual-sync") ||
-                            path.contains("social-connect") ||
-                            path.contains("melody/v1/check")
+                    val isDetection = BLOCKED_SPCLIENT_PATHS.any { path.contains(it) }
 
                     if (host.contains("spclient") && isDetection) {
                         Log.i(TAG, "★ L2: Detection Path BLOCKED -> $path")
@@ -92,10 +98,17 @@ fun SpotifyHook.LogOutPatch() {
                         if (text?.contains("access_token") == true) {
                             AuthCache.body = text
                             AuthCache.contentType = findMethodSafe(peeked.javaClass, "contentType")?.invoke(peeked)
+                            AuthCache.cachedAt = System.currentTimeMillis()
                             Log.d(TAG, "★ L1: Auth Token CACHED")
                         }
                     } else if ((code == 401 || code == 403) && AuthCache.body != null && isAuthEndpoint) {
-                        Log.w(TAG, "★ L1: Auth REJECTED ($code) -> REPLAYING cached success response")
+                        val ageSeconds = (System.currentTimeMillis() - AuthCache.cachedAt) / 1000
+                        if (ageSeconds > 3500) {
+                            Log.w(TAG, "★ L1: Cached token too old (${ageSeconds}s), NOT replaying")
+                            AuthCache.body = null
+                            return
+                        }
+                        Log.w(TAG, "★ L1: Auth REJECTED ($code) -> REPLAYING cached response (age: ${ageSeconds}s)")
 
                         val builder = findMethodSafe(resp.javaClass, "newBuilder")?.invoke(resp) ?: return
                         findMethodSafe(builder.javaClass, "code", Int::class.java)?.invoke(builder, 200)

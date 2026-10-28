@@ -55,6 +55,8 @@ android {
         versionCode = 33
         versionName = gitCommitDateProvider.get().trim()
         buildConfigField("String", "COMMIT_HASH", "\"${gitCommitHashProvider.get().trim()}\"")
+        buildConfigField("String", "PATCH_AUTHOR", "\"_sajiddz\"")
+        buildConfigField("String", "PATCH_DISCORD", "\"6aq4\"")
     }
     flavorDimensions += "abi"
     productFlavors {

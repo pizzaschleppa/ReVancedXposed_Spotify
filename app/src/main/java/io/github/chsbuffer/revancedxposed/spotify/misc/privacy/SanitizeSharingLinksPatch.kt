@@ -2,31 +2,36 @@ package io.github.chsbuffer.revancedxposed.spotify.misc.privacy
 
 import android.content.ClipData
 import app.revanced.extension.spotify.misc.privacy.SanitizeSharingLinksPatch
+import io.github.chsbuffer.revancedxposed.XposedBridge
 import io.github.chsbuffer.revancedxposed.XposedHelpers
 import io.github.chsbuffer.revancedxposed.scopedHook
 import io.github.chsbuffer.revancedxposed.spotify.SpotifyHook
 
 fun SpotifyHook.SanitizeSharingLinks() {
-    ::shareCopyUrlFingerprint.hookMethod(
-        scopedHook(
-            XposedHelpers.findMethodExact(
-                ClipData::class.java.name,
-                lpparam.classLoader,
-                "newPlainText",
-                CharSequence::class.java,
-                CharSequence::class.java
-            )
-        ) {
+    runCatching {
+        ::shareCopyUrlFingerprint.hookMethod(
+            scopedHook(
+                XposedHelpers.findMethodExact(
+                    ClipData::class.java.name,
+                    lpparam.classLoader,
+                    "newPlainText",
+                    CharSequence::class.java,
+                    CharSequence::class.java
+                )
+            ) {
+                before { param ->
+                    val url = param.args[1] as String
+                    param.args[1] = SanitizeSharingLinksPatch.sanitizeSharingLink(url)
+                }
+            })
+    }.onFailure { XposedBridge.log("SanitizeSharingLinks: shareCopyUrl hook failed: ${it.message}") }
+
+    runCatching {
+        ::formatAndroidShareSheetUrlFingerprint.hookMethod {
             before { param ->
                 val url = param.args[1] as String
                 param.args[1] = SanitizeSharingLinksPatch.sanitizeSharingLink(url)
             }
-        })
-
-    ::formatAndroidShareSheetUrlFingerprint.hookMethod {
-        before { param ->
-            val url = param.args[1] as String
-            param.args[1] = SanitizeSharingLinksPatch.sanitizeSharingLink(url)
         }
-    }
+    }.onFailure { XposedBridge.log("SanitizeSharingLinks: formatShareSheet hook failed: ${it.message}") }
 }

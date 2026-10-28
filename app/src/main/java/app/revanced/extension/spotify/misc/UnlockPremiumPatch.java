@@ -1,7 +1,8 @@
 /*
- * Custom changes:
- * Wipe stubbed types: REMOVED_HOME_SECTIONS, overrideAttributes, removeHomeSections
- * */
+ * Patched by: _sajiddz  (Discord: 6aq4)
+ * Fork of pizzaschleppa/ReVancedXposed_Spotify
+ * Changes: REMOVED_HOME_SECTIONS updated to casita.v1.resolved.Section (Spotify 9.1.90+)
+ */
 package app.revanced.extension.spotify.misc;
 
 import static java.lang.Boolean.FALSE;
@@ -72,8 +73,8 @@ public final class UnlockPremiumPatch {
      * response which delivers home sections.
      */
     private static final List<Integer> REMOVED_HOME_SECTIONS = List.of(
-            com.spotify.home.evopage.homeapi.proto.Section.VIDEO_BRAND_AD_FIELD_NUMBER,
-            com.spotify.home.evopage.homeapi.proto.Section.IMAGE_BRAND_AD_FIELD_NUMBER
+            com.spotify.casita.v1.resolved.Section.VIDEO_BRAND_AD_FIELD_NUMBER,
+            com.spotify.casita.v1.resolved.Section.IMAGE_BRAND_AD_FIELD_NUMBER
     );
 
     /**

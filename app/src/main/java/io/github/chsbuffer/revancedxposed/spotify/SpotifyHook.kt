@@ -35,8 +35,15 @@ class SpotifyHook(
     }
 
     // ══════════════════════════════════════════════════════
-    // NHB → NATIVE HTTP BLOCK
+    // NHB → NATIVE HTTP BLOCK (targeted)
     // ══════════════════════════════════════════════════════
+    private val NHB_BLOCKED_SEGMENTS = listOf(
+        "/ad-logic/",
+        "/ads/v2/",
+        "/v1/ads/",
+        "/gabo-receiver-service/",
+    )
+
     fun NHB() {
         runCatching {
 
@@ -59,9 +66,7 @@ class SpotifyHook(
                         val req = param.args[0]
                         val url = urlField.get(req) as? String ?: return
 
-                        if (url.contains("ads", true) ||
-                            url.contains("tracking", true)
-                        ) {
+                        if (NHB_BLOCKED_SEGMENTS.any { url.contains(it, true) }) {
                             XposedBridge.log("NHB BLOCK: $url")
                             param.result = null
                         }

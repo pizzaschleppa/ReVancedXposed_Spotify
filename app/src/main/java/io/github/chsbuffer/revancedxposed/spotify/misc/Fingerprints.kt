@@ -1,3 +1,8 @@
+/*
+ * Patched by: _sajiddz  (Discord: 6aq4)
+ * homeStructureGetSectionsFingerprint updated for Spotify 9.1.90+
+ *   homeapi.proto.HomeStructure  →  casita.v1.resolved.HomeStructure
+ */
 package io.github.chsbuffer.revancedxposed.spotify.misc
 
 import io.github.chsbuffer.revancedxposed.AccessFlags
@@ -78,8 +83,20 @@ fun structureGetSectionsFingerprint(className: String) = fingerprint {
     }
 }
 
-val homeStructureGetSectionsFingerprint =
-    structureGetSectionsFingerprint("homeapi.proto.HomeStructure")
+val homeStructureGetSectionsFingerprint = findMethodDirect {
+    // 9.1.90+ renamed homeapi.proto.HomeStructure → casita.v1.resolved.HomeStructure
+    runCatching {
+        fingerprint {
+            classMatcher { className("casita.v1.resolved.HomeStructure", StringMatchType.EndsWith) }
+            methodMatcher { addUsingField { usingType = UsingType.Read; name = "sections_" } }
+        }
+    }.getOrElse {
+        fingerprint {
+            classMatcher { className("homeapi.proto.HomeStructure", StringMatchType.EndsWith) }
+            methodMatcher { addUsingField { usingType = UsingType.Read; name = "sections_" } }
+        }
+    }
+}
 val browseStructureGetSectionsFingerprint =
     structureGetSectionsFingerprint("browsita.v1.resolved.BrowseStructure")
 
