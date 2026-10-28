@@ -121,6 +121,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
     
     testImplementation(kotlin("test-junit5"))
     testImplementation(libs.junit.jupiter.params)
